@@ -12,8 +12,8 @@ SEEDS_PER_RUN = 3
 
 # Program args
 default_args = [
-   "--env", "PongNoFrameskip-v4",
-#    "--env", "SeaquestNoFrameskip-v4",
+#    "--env", "PongNoFrameskip-v4",
+    "--env", "SeaquestNoFrameskip-v4",
 #    "--env", "BreakoutNoFrameskip-v4",
 #    "--env", "QbertNoFrameskip-v4",
 #    "--env", "MsPacmanNoFrameskip-v4",
@@ -39,7 +39,6 @@ default_args = [
     "--memory-capacity", "400000",
 #   Other args
     "--checkpoint-interval", "100000",
-    "--memory", "memory_store",
 ]
 
 # Values to tune
@@ -85,6 +84,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
                 clean_arg_name = arg.strip('-').replace('-', '_')
                 run_tag = f"{clean_arg_name}_{value}"
                 run_args += ["--uuid", run_tag]
+                run_args += ["--memory", f"memory_stores/{run_tag}_replay_memory.mem"]
                 run_args += ["--seed", str(seed)]
                 cmd = "python main.py " + ' '.join(run_args)
                 jobname = f"{default_args[1].replace('-', '_')}_{run_tag.replace('-','_')}_seed_{str(seed)}"

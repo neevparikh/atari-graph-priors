@@ -217,6 +217,8 @@ for k, v in vars(args).items():
 results_dir = os.path.join('results', run_tag)
 if not os.path.exists(results_dir):
     os.makedirs(results_dir)
+if args.memory is not None:
+    os.makedirs(results_dir, exist_ok=True)
 metrics = {
     'steps': [],
     'rewards': [],
