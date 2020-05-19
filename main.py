@@ -273,7 +273,6 @@ val_mem = ReplayMemory(args, args.evaluation_size)
 T, done = 0, True
 while T < args.evaluation_size:
     if done:
-        __import__('pdb').set_trace()
         state, done = env.reset(), False
 
     next_state, _, done, _ = env.step(np.random.randint(0, action_space))

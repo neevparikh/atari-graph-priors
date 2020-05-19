@@ -65,7 +65,7 @@ class Agent():
 
     # Acts based on single state (no batch)
     def act(self, state):
-        state = torch.as_tensor(state.astype(np.float32)).to(self.device)
+        state = state.to(device=self.device)
         with torch.no_grad():
             return (self.online_net(state.unsqueeze(0)) *
                     self.support).sum(2).argmax(1).item()
