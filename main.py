@@ -217,8 +217,6 @@ for k, v in vars(args).items():
 results_dir = os.path.join('results', run_tag)
 if not os.path.exists(results_dir):
     os.makedirs(results_dir)
-if args.memory is not None:
-    os.makedirs(args.memory, exist_ok=True)
 metrics = {
     'steps': [],
     'rewards': [],
@@ -334,7 +332,7 @@ else:
 
                 # If memory path provided, save it
                 if args.memory is not None:
-                    save_memory(mem, args.memory, args.disable_bzip_memory)
+                    save_memory(mem, f"{results_dir}/{args.memory}", args.disable_bzip_memory)
 
             # Update target network
             if T % args.target_update == 0:
