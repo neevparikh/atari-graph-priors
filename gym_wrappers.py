@@ -1,8 +1,8 @@
 import gym
 from collections import deque
 import numpy as np
-# import torchvision.transforms as T
-import cv2
+import torchvision.transforms as T
+# import cv2
 import torch
 
 
@@ -53,16 +53,16 @@ class AtariPreprocess(gym.Wrapper):
         """ Preprocessing as described in the Nature DQN paper (Mnih 2015) """
         gym.Wrapper.__init__(self, env)
         self.shape = shape
-        # self.transforms = T.Compose([
-        #     T.ToPILImage(mode='YCbCr'),
-        #     T.Lambda(lambda img: img.split()[0]),
-        #     T.Resize(self.shape),
-        #     T.Lambda(lambda img: np.array(img, copy=False)),
-        # ])
-        self.transforms = lambda img: cv2.resize(cv2.cvtColor(
-            img, cv2.COLOR_RGB2GRAY),
-                                                 shape,
-                                                 interpolation=cv2.INTER_AREA)
+        self.transforms = T.Compose([
+            T.ToPILImage(mode='YCbCr'),
+            T.Lambda(lambda img: img.split()[0]),
+            T.Resize(self.shape),
+            T.Lambda(lambda img: np.array(img, copy=False)),
+        ])
+        # self.transforms = lambda img: cv2.resize(cv2.cvtColor(
+        #     img, cv2.COLOR_RGB2GRAY),
+        #                                          shape,
+        #                                          interpolation=cv2.INTER_AREA)
         self.observation_space = gym.spaces.Box(
             low=0,
             high=255,
