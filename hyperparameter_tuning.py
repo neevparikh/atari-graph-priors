@@ -59,17 +59,18 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
     if grid_type == "ccv":
         cluster_args = [
             "--cpus", "4",
-            "--mem", "10",
+            "--gpus", "1",
+            "--mem", "5",
             "--env", ENV_PATH,
-            "--duration", "vlong",
+            "--duration", "medium",
         ]
     elif grid_type == "csgrid":
         cluster_args = [
-            "--jobtype", "cpu",
-            "--mem", "10",
-            "--nresources", "4",
+            "--jobtype", "gpu",
+            "--mem", "5",
+            "--nresources", "1",
             "--env", ENV_PATH,
-            "--duration", "vlong",
+            # "--duration", "vlong",
         ]
     elif grid_type == "no_grid":
         pass                                           
