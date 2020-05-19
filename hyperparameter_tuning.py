@@ -84,7 +84,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
                 clean_arg_name = arg.strip('-').replace('-', '_')
                 run_tag = f"{clean_arg_name}_{value}"
                 run_args += ["--uuid", run_tag]
-                run_args += ["--memory", f"memory_stores/{run_tag}_replay_memory.mem"]
+                run_args += ["--memory", f"{run_tag}_replay_memory.mem"]
                 run_args += ["--seed", str(seed)]
                 cmd = "python main.py " + ' '.join(run_args)
                 jobname = f"{default_args[1].replace('-', '_')}_{run_tag.replace('-','_')}_seed_{str(seed)}"
