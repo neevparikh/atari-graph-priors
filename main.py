@@ -163,6 +163,7 @@ parser.add_argument('--enable-cudnn',
 parser.add_argument(
     '--checkpoint-interval',
     default=0,
+    type=int,
     help='How often to checkpoint the model, defaults to 0 (never checkpoint)')
 parser.add_argument('--memory', help='Path to save/load the memory from')
 parser.add_argument(
