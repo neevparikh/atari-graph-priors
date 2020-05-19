@@ -134,7 +134,7 @@ source {}
     duration_map = {
         'test': '0:10:00',  # 10 minutes
         'short': '1:00:00',  # 1 hour
-        'medium': '6:00:00', # 6 hours
+        'medium': '12:00:00', # 12 hours
         'long': '1-00:00:00',  # 1 day
         'slong': '2-00:00:00',  # 2 days
         'vlong': '7-00:00:00',  # 1 week
