@@ -26,7 +26,7 @@ parser.add_argument('--env',
                     help='ATARI game')
 parser.add_argument('--T-max',
                     type=int,
-                    default=int(50e6),
+                    default=int(400e3),
                     metavar='STEPS',
                     help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length',
@@ -41,13 +41,13 @@ parser.add_argument('--history-length',
                     help='Number of consecutive states processed')
 parser.add_argument('--architecture',
                     type=str,
-                    default='canonical',
+                    default='data-efficient',
                     choices=['canonical', 'mlp', 'data-efficient'],
                     metavar='ARCH',
                     help='Network architecture')
 parser.add_argument('--hidden-size',
                     type=int,
-                    default=512,
+                    default=256,
                     metavar='SIZE',
                     help='Network hidden size')
 parser.add_argument('--noisy-std',
@@ -76,12 +76,12 @@ parser.add_argument('--model',
                     help='Pretrained model (state dict)')
 parser.add_argument('--memory-capacity',
                     type=int,
-                    default=int(1e6),
+                    default=int(400e3),
                     metavar='CAPACITY',
                     help='Experience replay memory capacity')
 parser.add_argument('--replay-frequency',
                     type=int,
-                    default=4,
+                    default=1,
                     metavar='k',
                     help='Frequency of sampling from memory')
 parser.add_argument(
@@ -98,7 +98,7 @@ parser.add_argument(
     help='Initial prioritised experience replay importance sampling weight')
 parser.add_argument('--multi-step',
                     type=int,
-                    default=3,
+                    default=20,
                     metavar='n',
                     help='Number of steps for multi-step return')
 parser.add_argument('--discount',
@@ -109,7 +109,7 @@ parser.add_argument('--discount',
 parser.add_argument(
     '--target-update',
     type=int,
-    default=int(8e3),
+    default=int(2000),
     metavar='τ',
     help='Number of steps after which to update target network')
 parser.add_argument('--reward-clip',
@@ -119,7 +119,7 @@ parser.add_argument('--reward-clip',
                     help='Reward clipping (0 to disable)')
 parser.add_argument('--learning-rate',
                     type=float,
-                    default=0.0000625,
+                    default=0.0001,
                     metavar='η',
                     help='Learning rate')
 parser.add_argument('--adam-eps',
@@ -134,13 +134,13 @@ parser.add_argument('--batch-size',
                     help='Batch size')
 parser.add_argument('--learn-start',
                     type=int,
-                    default=int(20e3),
+                    default=1600,
                     metavar='STEPS',
                     help='Number of steps before starting training')
 parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
 parser.add_argument('--evaluation-interval',
                     type=int,
-                    default=100000,
+                    default=10000,
                     metavar='STEPS',
                     help='Number of training steps between evaluations')
 parser.add_argument('--evaluation-episodes',
@@ -172,9 +172,9 @@ parser.add_argument(
     'Don\'t zip the memory file. Not recommended (zipping is a bit slower and much, much smaller)'
 )
 parser.add_argument('--uuid',
-                    help="""UUID for the experient run. 
+                    help="""UUID for the experient run.
                     `env` uses environment name,
-                    `random` uses a random UUID 
+                    `random` uses a random UUID
                         (i.e. 2b25d648-ce34-4523-b409-35247d481e32),
                     anything else is custom, example:
                     PongNoFrameskip_ari_5 (uuid = env)
