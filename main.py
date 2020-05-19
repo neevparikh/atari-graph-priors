@@ -42,7 +42,7 @@ parser.add_argument('--history-length',
 parser.add_argument('--architecture',
                     type=str,
                     default='canonical',
-                    choices=['canonical', 'data-efficient'],
+                    choices=['canonical', 'mlp', 'data-efficient'],
                     metavar='ARCH',
                     help='Network architecture')
 parser.add_argument('--hidden-size',
@@ -322,7 +322,7 @@ else:
 
             if T % args.evaluation_interval == 0:
                 dqn.eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = test(args, T, dqn, val_mem, metrics,
+                avg_reward, avg_Q = test(args, test_env, T, dqn, val_mem, metrics,
                                          results_dir)  # Test
                 log('T = ' + str(T) + ' / ' + str(args.T_max) +
                     ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' +
