@@ -37,6 +37,9 @@ default_args = [
     "--architecture", "data-efficient",
     "--T-max", "400000",
     "--memory-capacity", "400000",
+#   Other args
+    "--checkpoint-interval", "100000",
+    "--memory", "memory_store",
 ]
 
 # Values to tune
