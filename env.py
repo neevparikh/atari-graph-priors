@@ -4,17 +4,18 @@ import torch
 import gym
 from atariari.benchmark.wrapper import AtariARIWrapper
 from gym_wrappers import FrameStack, MaxAndSkipEnv, AtariPreprocess, ResetARI, \
-    TorchWrapper
+    TorchWrapper, EpisodicLifeEnv
 
 
 def make_atari(env, num_frames):
     """ Wrap env in atari processed env """
-    return FrameStack(MaxAndSkipEnv(AtariPreprocess(env), 4), num_frames)
+    return FrameStack(MaxAndSkipEnv(AtariPreprocess(EpisodicLifeEnv(env)), 4),
+                      num_frames)
 
 
 def make_ari(env):
     """ Wrap env in reset to match observation """
-    return ResetARI(AtariARIWrapper(env))
+    return ResetARI(AtariARIWrapper(EpisodicLifeEnv(env)))
 
 
 def get_env(args):
@@ -34,7 +35,7 @@ def get_env(args):
         uuid_tag = uuid.uuid4()
     else:
         uuid_tag = args.uuid
-     
+
     if args.ari:
         assert args.ram, "Need to use ARI with ram state observations"
         env = make_ari(env)
