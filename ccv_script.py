@@ -38,7 +38,7 @@ def parse_args(custom_args=None):
                         help='Amount of RAM to request *per node* (in GB)')
     parser.add_argument('--env', type=str, default='./env',
                         help='Path to virtualenv')
-    parser.add_argument('--duration', choices=['test', 'short', 'long', 'slong', 'vlong'], default='long',
+    parser.add_argument('--duration', choices=['test', 'short', 'medium', 'long', 'slong', 'vlong'], default='long',
                         help='Expected duration of job')
     parser.add_argument('-t','--taskid', type=int, default=1,
                         help='Task ID of first task')
