@@ -248,23 +248,23 @@ dqn = Agent(args, env)
 # If a model is provided, and evaluate is fale, presumably we want to resume, so try to load memory
 if args.model is not None and not args.evaluate:
     if not args.memory:
-        raise ValueError(
-            'Cannot resume training without memory save path. Aborting...')
+        raise ValueError('Cannot resume training without memory save path. Aborting...')
     elif not os.path.exists(args.memory):
         raise ValueError(
-            'Could not find memory file at {path}. Aborting...'.format(
-                path=args.memory))
+            'Could not find memory file at {path}. Aborting...'.format(path=args.memory)
+        )
 
     mem = load_memory(args.memory, args.disable_bzip_memory)
 
 else:
-    mem = ReplayMemory(args, args.memory_capacity)
+    # We need the previous (non-framestacked obs space)
+    mem = ReplayMemory(args, args.memory_capacity, env.env.observation_space.shape)
 
-priority_weight_increase = (1 - args.priority_weight) / (args.T_max -
-                                                         args.learn_start)
+priority_weight_increase = (1 - args.priority_weight) / (args.T_max - args.learn_start)
 
 # Construct validation memory
-val_mem = ReplayMemory(args, args.evaluation_size)
+# We need the previous (non-framestacked obs space)
+val_mem = ReplayMemory(args, args.evaluation_size, env.env.observation_space.shape)
 T, done = 0, True
 while T < args.evaluation_size:
     if done:

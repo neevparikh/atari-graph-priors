@@ -4,20 +4,21 @@ from collections import namedtuple
 import numpy as np
 import torch
 
-Transition = namedtuple(
-    'Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal'))
-blank_trans = Transition(0, torch.zeros(84, 84, dtype=torch.uint8), None, 0,
-                         False)
+Transition = namedtuple('Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal'))
 
 
 # Segment tree data structure where parent node values are sum/max of children node values
 class SegmentTree():
-    def __init__(self, size):
+
+    def __init__(self, size, input_shape):
         self.index = 0
+        self.blank_trans = Transition(
+            0, torch.zeros(input_shape, dtype=torch.uint8), None, 0, False
+        )
         self.size = size
         self.full = False  # Used to track actual capacity
         self.sum_tree = np.zeros(
-            (2 * size - 1, ), dtype=np.float32
+            (2 * size - 1,), dtype=np.float32
         )  # Initialise fixed size tree with all (priority) zeros
         self.data = np.array([None] * size)  # Wrap-around cyclic buffer
         self.max = 1  # Initial max value to return (1 = 1^ω)
@@ -98,16 +99,14 @@ class ReplayMemory():
         transition[self.history - 1] = self.transitions.get(idx)
         for t in range(self.history - 2, -1, -1):  # e.g. 2 1 0
             if transition[t + 1].timestep == 0:
-                transition[t] = blank_trans  # If future frame has timestep 0
+                transition[t] = self.blank_trans  # If future frame has timestep 0
             else:
-                transition[t] = self.transitions.get(idx - self.history + 1 +
-                                                     t)
+                transition[t] = self.transitions.get(idx - self.history + 1 + t)
         for t in range(self.history, self.history + self.n):  # e.g. 4 5 6
             if transition[t - 1].nonterminal:
-                transition[t] = self.transitions.get(idx - self.history + 1 +
-                                                     t)
+                transition[t] = self.transitions.get(idx - self.history + 1 + t)
             else:
-                transition[t] = blank_trans  # If prev (next) frame is terminal
+                transition[t] = self.blank_trans  # If prev (next) frame is terminal
         return transition
 
     # Returns a valid sample from a segment
