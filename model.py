@@ -121,7 +121,7 @@ class DQN(nn.Module):
         elif args.architecture == 'pretrained':
             assert args.phi_net_path is not None, 'Must specify path to feature network'
             # Always load tensors onto CPU by default, will shift to GPU if necessary
-            phi, output_size = torch.load(args.phi_net_path)
+            phi, output_size = torch.load(args.phi_net_path, map_location='cpu')
             phi = phi.to(device=args.device)
             for param in phi.parameters():
                 param.requires_grad = False
