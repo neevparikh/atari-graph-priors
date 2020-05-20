@@ -215,7 +215,7 @@ class MarkovHead(nn.Module):
         z1_pos_neg = torch.cat([z1, z1_neg], dim=0)
         is_real_transition = torch.cat([torch.ones(N), torch.zeros(N)], dim=0)
         log_pr_real = self.discriminator(z0_extended, z1_pos_neg)
-        l_ratio = self.bce(input=log_pr_real, target=is_real_transition.float())
+        l_ratio = self.bce(input=log_pr_real, target=is_real_transition.unsqueeze(-1).float())
 
         markov_loss = l_inverse + l_ratio
         return markov_loss
