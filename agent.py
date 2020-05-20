@@ -90,7 +90,7 @@ class Agent():
         ) if np.random.random() < epsilon else self.act(state)
 
     def loss(self, batch):
-        idxs, states, actions, returns, next_states, nonterminals, weights = *batch
+        idxs, states, actions, returns, next_states, nonterminals, weights = batch
 
         # Calculate current state probabilities (online network noise already sampled)
         log_ps = self.online_net(
