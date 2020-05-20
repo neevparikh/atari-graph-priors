@@ -103,6 +103,11 @@ parser.add_argument('--discount',
                     default=0.99,
                     metavar='γ',
                     help='Discount factor')
+parser.add_argument('--markov-loss-coef',
+                    type=float,
+                    default=1.0,
+                    metavar='λ',
+                    help='Coefficient for Markov loss when training online')
 parser.add_argument('--target-update',
                     type=int,
                     default=int(2000),

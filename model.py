@@ -78,6 +78,8 @@ class DQN(nn.Module):
         self.action_space = action_space
 
         self.phi, self.feature_size = self.get_phi(args)
+        if args.architecture == 'online':
+            self.markov_head = MarkovHead(args, self.feature_size, action_space)
         self.fc_h_v = NoisyLinear(self.feature_size,
                                   args.hidden_size,
                                   std_init=args.noisy_std)
@@ -111,7 +113,7 @@ class DQN(nn.Module):
             layers = [Reshape(-1, shape_flat), nn.Linear(shape_flat, output_size)]
             phi = nn.Sequential(*layers)
 
-        elif args.architecture == 'data-efficient':
+        elif args.architecture in ['data-efficient', 'online']:
             phi = nn.Sequential(
                 nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
                 nn.ReLU(), nn.Conv2d(32, 64, 5, stride=5, padding=0),
@@ -125,9 +127,6 @@ class DQN(nn.Module):
             phi = phi.to(device=args.device)
             for param in phi.parameters():
                 param.requires_grad = False
-
-        elif args.architecture == 'online':
-            raise NotImplementedError
 
         else:
             raise ValueError('Invalid architecture: {}'.format(args.architecture))
