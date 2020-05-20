@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import math
+import os
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -76,11 +77,11 @@ class DQN(nn.Module):
         self.state_space = observation_space
         self.action_space = action_space
 
-        self.convs, self.conv_output_size = self.get_phi(args)
-        self.fc_h_v = NoisyLinear(self.conv_output_size,
+        self.phi, self.feature_size = self.get_phi(args)
+        self.fc_h_v = NoisyLinear(self.feature_size,
                                   args.hidden_size,
                                   std_init=args.noisy_std)
-        self.fc_h_a = NoisyLinear(self.conv_output_size,
+        self.fc_h_a = NoisyLinear(self.feature_size,
                                   args.hidden_size,
                                   std_init=args.noisy_std)
         self.fc_z_v = NoisyLinear(args.hidden_size,
@@ -93,6 +94,7 @@ class DQN(nn.Module):
         trainable_parameters = sum(
             p.numel() for p in self.parameters() if p.requires_grad)
         print(f"Number of trainable parameters: {trainable_parameters}")
+
     def get_phi(self, args):
         if args.architecture == 'canonical':
             phi = nn.Sequential(
@@ -116,12 +118,30 @@ class DQN(nn.Module):
                 nn.ReLU())
             output_size = 576
 
+        elif args.architecture == 'pretrained':
+            assert args.phi_net_path is not None, 'Must specify path to feature network'
+            # Always load tensors onto CPU by default, will shift to GPU if necessary
+            phi, output_size = torch.load(args.phi_net_path, map_location='cpu')
+            phi = phi.to(device=args.device)
+            for param in phi.parameters():
+                param.requires_grad = False
+
+        elif args.architecture == 'online':
+            raise NotImplementedError
+
+        else:
+            raise ValueError('Invalid architecture: {}'.format(args.architecture))
+
         return phi, output_size
 
+    def save_phi(self, path, name):
+        full_path = os.path.join(path, name)
+        torch.save((self.phi, self.feature_size), full_path)
+        return full_path
 
     def forward(self, x, log=False):
-        x = self.convs(x)
-        x = x.view(-1, self.conv_output_size)
+        x = self.phi(x)
+        x = x.view(-1, self.feature_size)
         v = self.fc_z_v(F.relu(self.fc_h_v(x)))  # Value stream
         a = self.fc_z_a(F.relu(self.fc_h_a(x)))  # Advantage stream
         v, a = v.view(-1, 1, self.atoms), a.view(-1, self.action_space,

@@ -29,15 +29,23 @@ class Agent():
                     args.model, map_location='cpu'
                 )  # Always load tensors onto CPU by default, will shift to GPU if necessary
                 if 'conv1.weight' in state_dict.keys():
-                    for old_key, new_key in (('conv1.weight',
-                                              'convs.0.weight'),
-                                             ('conv1.bias', 'convs.0.bias'),
-                                             ('conv2.weight',
-                                              'convs.2.weight'),
-                                             ('conv2.bias', 'convs.2.bias'),
-                                             ('conv3.weight',
-                                              'convs.4.weight'),
-                                             ('conv3.bias', 'convs.4.bias')):
+                    for old_key, new_key in (
+                        ('conv1.weight', 'convs.0.weight'),
+                        ('conv1.bias', 'convs.0.bias'),
+                        ('conv2.weight', 'convs.2.weight'),
+                        ('conv2.bias', 'convs.2.bias'),
+                        ('conv3.weight', 'convs.4.weight'),
+                        ('conv3.bias', 'convs.4.bias')):
+                        state_dict[new_key] = state_dict[
+                            old_key]  # Re-map state dict for old pretrained models
+                        del state_dict[
+                            old_key]  # Delete old keys for strict load_state_dict
+                if 'convs.0.weight' in state_dict.keys():
+                    for old_key, new_key in (
+                        ('convs.0.weight', 'phi.0.weight'),
+                        ('convs.0.bias', 'phi.0.bias'),
+                        ('convs.2.weight', 'phi.2.weight'),
+                        ('convs.2.bias', 'phi.2.bias')):
                         state_dict[new_key] = state_dict[
                             old_key]  # Re-map state dict for old pretrained models
                         del state_dict[
@@ -152,6 +160,7 @@ class Agent():
     # Save model parameters on current device (don't move model between devices)
     def save(self, path, name='model.pth'):
         torch.save(self.online_net.state_dict(), os.path.join(path, name))
+        self.online_net.save_phi(path, 'phi_'+name)
 
     # Evaluates Q-value based on single state (no batch)
     def evaluate_q(self, state):

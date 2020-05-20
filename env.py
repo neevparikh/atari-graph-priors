@@ -14,6 +14,12 @@ def make_atari(env, num_frames, training=False):
     return FrameStack(MaxAndSkipEnv(AtariPreprocess(env), 4),
                       num_frames)
 
+def make_ram(env, num_frames, training=False):
+    """ Wrap env in reset to match observation """
+    if training:
+        env = EpisodicLifeEnv(env)
+    return FrameStack(env, num_frames)
+
 
 def make_ari(env, num_frames, training=False):
     """ Wrap env in reset to match observation """
@@ -39,8 +45,8 @@ def get_env(args):
         uuid_tag = args.uuid
 
     if args.architecture == 'ram':
-        env = FrameStack(env, args.history_length, training=True)
-        test_env = FrameStack(test_env, args.history_length, training=False)
+        env = make_ram(env, args.history_length, training=True)
+        test_env = make_ram(test_env, args.history_length, training=False)
     elif args.architecture == 'ari':
         env = make_ari(env, args.history_length, training=True)
         test_env = make_ari(test_env, args.history_length, training=False)
