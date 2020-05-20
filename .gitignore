@@ -93,3 +93,10 @@ ENV/
 *.pth
 # Plots
 *.html
+
+jobs/ 
+slurm/ 
+gridengine/ 
+results/ 
+
+setup.cfg
