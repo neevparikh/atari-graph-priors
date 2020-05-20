@@ -58,7 +58,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
     # Cluster args
     if grid_type == "ccv":
         cluster_args = [
-            "--cpus", "8",
+            "--cpus", "6",
             "--gpus", "1",
             "--mem", "13",
             "--env", ENV_PATH,
