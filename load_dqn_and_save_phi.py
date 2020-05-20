@@ -202,8 +202,7 @@ dqn = Agent(args, env)
 model_filename = os.path.basename(args.model)
 model_dirname = os.path.dirname(args.model)
 
-phi_net_path = os.path.join(model_dirname, 'phi_'+model_filename)
-torch.save((dqn.online_net.phi, dqn.online_net.feature_size), phi_net_path)
+phi_net_path = dqn.online_net.save_phi(model_dirname, 'phi_'+model_filename)
 print('Saved phi network to {}'.format(phi_net_path))
 
 print(torch.load(phi_net_path))

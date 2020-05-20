@@ -160,7 +160,7 @@ class Agent():
     # Save model parameters on current device (don't move model between devices)
     def save(self, path, name='model.pth'):
         torch.save(self.online_net.state_dict(), os.path.join(path, name))
-        torch.save((self.online_net.phi, self.online_net.feature_size), os.path.join(path, 'phi_'+name))
+        self.online_net.save_phi(path, 'phi_'+name)
 
     # Evaluates Q-value based on single state (no batch)
     def evaluate_q(self, state):

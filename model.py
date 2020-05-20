@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import math
+import os
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -132,6 +133,11 @@ class DQN(nn.Module):
             raise ValueError('Invalid architecture: {}'.format(args.architecture))
 
         return phi, output_size
+
+    def save_phi(self, path, name):
+        full_path = os.path.join(path, name)
+        torch.save((self.phi, self.feature_size), full_path)
+        return full_path
 
     def forward(self, x, log=False):
         x = self.phi(x)
