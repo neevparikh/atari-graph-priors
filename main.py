@@ -39,7 +39,7 @@ parser.add_argument('--history-length',
 parser.add_argument('--architecture',
                     type=str,
                     default='data-efficient',
-                    choices=['canonical', 'data-efficient', 'ari', 'ram'],
+                    choices=['canonical', 'data-efficient', 'ari', 'ram', 'pretrained', 'online'],
                     metavar='ARCH',
                     help='Network architecture')
 parser.add_argument('--hidden-size',
@@ -162,6 +162,9 @@ parser.add_argument('--checkpoint-interval',
                     help='How often to checkpoint the model, \
             defaults to 0 (never checkpoint)')
 parser.add_argument('--memory', help='Path to save/load the memory from')
+parser.add_argument('--phi-net-path',
+                    type=str,
+                    help='Path to save/load the phi network from')
 parser.add_argument('--disable-bzip-memory',
                     action='store_true',
                     help='Don\'t zip the memory file. Not recommended \
