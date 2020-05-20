@@ -101,6 +101,10 @@ class DQN(nn.Module):
                                   action_space * self.atoms,
                                   std_init=args.noisy_std)
 
+        trainable_parameters = sum(
+            p.numel() for p in self.parameters() if p.requires_grad)
+        print(f"Number of trainable parameters: {trainable_parameters}")
+
     def forward(self, x, log=False):
         x = self.convs(x)
         x = x.view(-1, self.conv_output_size)
