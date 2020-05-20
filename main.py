@@ -86,14 +86,12 @@ parser.add_argument('--priority-exponent',
                     type=float,
                     default=0.5,
                     metavar='ω',
-                    help='Prioritised experience replay exponent \
-            (originally denoted α)'                                   )
+                    help='Prioritised experience replay exponent (originally denoted α)')
 parser.add_argument('--priority-weight',
                     type=float,
                     default=0.4,
                     metavar='β',
-                    help='Initial prioritised experience replay \
-            importance sampling weight'                                       )
+                    help='Initial prioritised experience replay importance sampling weight')
 parser.add_argument('--multi-step',
                     type=int,
                     default=20,
@@ -165,16 +163,14 @@ parser.add_argument('--enable-cudnn',
 parser.add_argument('--checkpoint-interval',
                     default=0,
                     type=int,
-                    help='How often to checkpoint the model, \
-            defaults to 0 (never checkpoint)'                                             )
+                    help='How often to checkpoint the model, defaults to 0 (never checkpoint)')
 parser.add_argument('--memory', help='Path to save/load the memory from')
 parser.add_argument('--phi-net-path',
                     type=str,
                     help='Path to save/load the phi network from')
 parser.add_argument('--disable-bzip-memory',
                     action='store_true',
-                    help='Don\'t zip the memory file. Not recommended \
-            (zipping is a bit slower and much, much smaller)'                                                             )
+                    help='Don\'t zip the memory file. Not recommended (zipping is a bit slower and much, much smaller)')
 parser.add_argument('--uuid',
                     help="""UUID for the experient run.
                     `env` uses environment name,
