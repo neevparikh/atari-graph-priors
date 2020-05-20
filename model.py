@@ -166,10 +166,11 @@ class DQN(nn.Module):
 
 class InverseModel(nn.Module):
     def __init__(self, args, feature_size, action_space):
+        super(InverseModel, self).__init__()
         self.model = nn.Sequential(
-            nn.Linear(self.feature_size*2, args.hidden_size),
+            nn.Linear(feature_size*2, args.hidden_size),
             nn.ReLU(),
-            nn.Linear(args.hidden_size, self.action_space)
+            nn.Linear(args.hidden_size, action_space)
         )
     def forward(self, z0, z1):
         context = torch.cat((z0, z1), -1)
@@ -177,8 +178,9 @@ class InverseModel(nn.Module):
 
 class ContrastiveModel(nn.Module):
     def __init__(self, args, feature_size):
+        super(ContrastiveModel, self).__init__()
         self.model = nn.Sequential(
-            nn.Linear(self.feature_size*2, args.hidden_size),
+            nn.Linear(feature_size*2, args.hidden_size),
             nn.ReLU(),
             nn.Linear(args.hidden_size, 1)
         )
