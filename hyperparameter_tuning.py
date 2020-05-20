@@ -12,32 +12,15 @@ SEEDS_PER_RUN = 3
 
 # Program args
 default_args = [
+# Select an environment
 #    "--env", "PongNoFrameskip-v4",
     "--env", "SeaquestNoFrameskip-v4",
 #    "--env", "BreakoutNoFrameskip-v4",
 #    "--env", "QbertNoFrameskip-v4",
 #    "--env", "MsPacmanNoFrameskip-v4",
-    "--enable-cudnn", 
-#   Common args
-    "--evaluation-interval", "10000",
-    "--target-update", "2000",
-    "--noisy-std", "0.1",
-    "--atoms", "51",
-    "--replay-frequency", "4",
-    "--priority-exponent", "0.5",
-    "--priority-weight", "0.4",
-    "--reward-clip", "1",
-    "--batch-size", "32",
-    "--adam-eps", "1.5e-4",
-#   Data efficient args
-    "--learn-start", "1600", 
-    "--replay-frequency", "1",
-    "--multi-step", "20", 
-    "--hidden-size", "256",
+# Other args
     "--architecture", "data-efficient",
-    "--T-max", "400000",
-    "--memory-capacity", "400000",
-#   Other args
+    "--enable-cudnn",
     "--checkpoint-interval", "100000",
     "--memory", "replay_memory.mem"
 ]
@@ -48,7 +31,7 @@ tuning_values = {
 }
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     if len(sys.argv) != 3:
         raise RuntimeError("""Usage:
 python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
@@ -72,7 +55,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
             "--env", ENV_PATH,
         ]
     elif grid_type == "no_grid":
-        pass                                           
+        pass
     else:
         raise RuntimeError("""Usage:
 python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
@@ -83,6 +66,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
                 run_args = default_args + [arg, value]
                 clean_arg_name = arg.strip('-').replace('-', '_')
                 run_tag = f"{clean_arg_name}_{value}"
+                run_tag += '_ari' if default_args[3] == 'ari' else ''
                 run_args += ["--uuid", run_tag]
                 run_args += ["--seed", str(seed)]
                 cmd = "python main.py " + ' '.join(run_args)
