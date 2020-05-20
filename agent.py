@@ -22,7 +22,7 @@ class Agent():
         self.n = args.multi_step
         self.discount = args.discount
 
-        self.online_net = DQN(args, self.action_space).to(device=args.device)
+        self.online_net = DQN(args, env.observation_space, self.action_space).to(device=args.device)
         if args.model:  # Load pretrained model if provided
             if os.path.isfile(args.model):
                 state_dict = torch.load(
@@ -49,7 +49,7 @@ class Agent():
 
         self.online_net.train()
 
-        self.target_net = DQN(args, self.action_space).to(device=args.device)
+        self.target_net = DQN(args, env.observation_space, self.action_space).to(device=args.device)
         self.update_target_net()
         self.target_net.train()
         for param in self.target_net.parameters():
