@@ -19,10 +19,10 @@ default_args = [
 #    "--env", "SeaquestNoFrameskip-v4",
 #    "--env", "BreakoutNoFrameskip-v4",
 #    "--env", "QbertNoFrameskip-v4",
-#    "--env", "MsPacmanNoFrameskip-v4",
+    "--env", "MsPacmanNoFrameskip-v4",
 # Select a mode
 #    "--architecture", "data-efficient",
-#    "--architecture", "ari",
+    "--architecture", "ari",
 #    "--architecture", "online",
 #    "--architecture", "ram",
 # Other args
@@ -50,7 +50,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
         cluster_args = [
             "--cpus", "6",
             "--gpus", "1",
-            "--mem", "13",
+            "--mem", "3",
             "--env", ENV_PATH,
             "--duration", "medium",
         ]
@@ -72,11 +72,11 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
                 run_args = default_args + [arg, value]
                 clean_arg_name = arg.strip('-').replace('-', '_')
                 run_tag = f"{clean_arg_name}_{value}"
-                run_tag += '_ari' if default_args[3] == 'ari' else ''
                 run_args += ["--uuid", run_tag]
                 run_args += ["--seed", str(seed)]
                 cmd = "python main.py " + ' '.join(run_args)
                 jobname = f"{default_args[1].replace('-', '_')}_{run_tag.replace('-','_')}_seed_{str(seed)}"
+                jobname += '_ari' if default_args[3] == 'ari' else ''
                 if grid_type != "no_grid":
                     cmd = "unbuffer " + cmd
                     cluster_args += ["--command", cmd]
