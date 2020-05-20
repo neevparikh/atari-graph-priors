@@ -42,7 +42,7 @@ parser.add_argument('--history-length',
 parser.add_argument('--architecture',
                     type=str,
                     default='data-efficient',
-                    choices=['canonical', 'mlp', 'data-efficient'],
+                    choices=['canonical', 'data-efficient', 'ari', 'ram'],
                     metavar='ARCH',
                     help='Network architecture')
 parser.add_argument('--hidden-size',
@@ -184,14 +184,6 @@ parser.add_argument('--uuid',
                     """,
                     default='env',
                     type=str,
-                    required=False)
-parser.add_argument('--ari',
-                    help='Whether to use annotated RAM',
-                    action='store_true',
-                    required=False)
-parser.add_argument('--ram',
-                    help='Whether to use RAM observations',
-                    action='store_true',
                     required=False)
 
 # Setup

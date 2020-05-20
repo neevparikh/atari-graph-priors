@@ -13,19 +13,17 @@ def make_atari(env, num_frames):
                       num_frames)
 
 
-def make_ari(env):
+def make_ari(env, num_frames):
     """ Wrap env in reset to match observation """
-    return ResetARI(AtariARIWrapper(EpisodicLifeEnv(env)))
+    return FrameStack(ResetARI(AtariARIWrapper(EpisodicLifeEnv(env))), num_frames)
 
 
 def get_env(args):
     # Initialize environment
-    if type(args.env) == str:
-        env = gym.make(args.env)
-        test_env = gym.make(args.env)
-    else:
-        env = args.env
-        test_env = args.env
+    if args.architecture == 'ram':
+        assert '-ram' in args.env, 'Need to use ram environment with ram architecture.'
+    env = gym.make(args.env)
+    test_env = gym.make(args.env)
 
     # Get uuid for run
     if args.uuid == 'env':
@@ -36,12 +34,13 @@ def get_env(args):
     else:
         uuid_tag = args.uuid
 
-    if args.ari:
-        assert args.ram, "Need to use ARI with ram state observations"
-        env = make_ari(env)
-        test_env = make_ari(test_env)
-
-    if not args.ram:
+    if args.architecture == 'ram':
+        env = FrameStack(env, args.history_length)
+        test_env = FrameStack(test_env, args.history_length)
+    elif args.architecture == 'ari':
+        env = make_ari(env, args.history_length)
+        test_env = make_ari(test_env, args.history_length)
+    else:
         env = make_atari(env, args.history_length)
         test_env = make_atari(test_env, args.history_length)
 
@@ -51,7 +50,7 @@ def get_env(args):
     # Set tag for this run
     run_tag = args.env
     run_tag += '_' + args.uuid if args.uuid != 'env' else ''
-    run_tag += '_ari' if args.ari else ''
+    run_tag += '_ari' if args.architecture == 'ari' else ''
     run_tag += '_seed_' + str(args.seed)
 
     return env, test_env, run_tag
