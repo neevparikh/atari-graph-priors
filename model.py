@@ -99,12 +99,15 @@ class DQN(nn.Module):
 
     def get_phi(self, args):
         if args.architecture == 'canonical':
+            output_size = 3136
             phi = nn.Sequential(
                 nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0),
-                nn.ReLU(), nn.Conv2d(32, 64, 4, stride=2,
-                                   padding=0), nn.ReLU(),
-                nn.Conv2d(64, 64, 3, stride=1, padding=0), nn.ReLU())
-            output_size = 3136
+                nn.ReLU(),
+                nn.Conv2d(32, 64, 4, stride=2, padding=0),
+                nn.ReLU(),
+                nn.Conv2d(64, 64, 3, stride=1, padding=0),
+                nn.ReLU(),
+                Reshape(-1, output_size))
 
         elif args.architecture in ['ari','ram']:
             input_shape = self.state_space.shape
@@ -114,11 +117,13 @@ class DQN(nn.Module):
             phi = nn.Sequential(*layers)
 
         elif args.architecture in ['data-efficient', 'online']:
+            output_size = 576
             phi = nn.Sequential(
                 nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
-                nn.ReLU(), nn.Conv2d(32, 64, 5, stride=5, padding=0),
-                nn.ReLU())
-            output_size = 576
+                nn.ReLU(),
+                nn.Conv2d(32, 64, 5, stride=5, padding=0),
+                nn.ReLU(),
+                Reshape(-1, output_size))
 
         elif args.architecture == 'pretrained':
             assert args.phi_net_path is not None, 'Must specify path to feature network'
@@ -140,7 +145,6 @@ class DQN(nn.Module):
 
     def forward(self, x, log=False):
         x = self.phi(x)
-        x = x.view(-1, self.feature_size)
         v = self.fc_z_v(F.relu(self.fc_h_v(x)))  # Value stream
         a = self.fc_z_a(F.relu(self.fc_h_a(x)))  # Advantage stream
         v, a = v.view(-1, 1, self.atoms), a.view(-1, self.action_space,
