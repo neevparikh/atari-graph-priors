@@ -60,7 +60,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]""")
         cluster_args = [
             "--cpus", "8",
             "--gpus", "1",
-            "--mem", "10",
+            "--mem", "13",
             "--env", ENV_PATH,
             "--duration", "medium",
         ]
