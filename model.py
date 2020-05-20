@@ -160,3 +160,57 @@ class DQN(nn.Module):
         for name, module in self.named_children():
             if 'fc' in name:
                 module.reset_noise()
+
+class InverseModel(nn.Module):
+    def __init__(self, args, feature_size, action_space):
+        self.model = nn.Sequential(
+            nn.Linear(self.feature_size*2, args.hidden_size),
+            nn.ReLU(),
+            nn.Linear(args.hidden_size, self.action_space)
+        )
+    def forward(self, z0, z1):
+        context = torch.cat((z0, z1), -1)
+        return self.model(context)
+
+class ContrastiveModel(nn.Module):
+    def __init__(self, args, feature_size):
+        self.model = nn.Sequential(
+            nn.Linear(self.feature_size*2, args.hidden_size),
+            nn.ReLU(),
+            nn.Linear(args.hidden_size, 1)
+        )
+    def forward(self, z0, z1):
+        context = torch.cat((z0, z1), -1)
+        return self.model(context)
+
+class MarkovHead(nn.Module):
+    def __init__(self, args, feature_size, action_space):
+        super(MarkovHead, self).__init__()
+        self.inverse_model = InverseModel(args, feature_size, action_space)
+        self.discriminator = ContrastiveModel(args, feature_size)
+
+        self.bce = torch.nn.BCEWithLogitsLoss()
+        self.ce = torch.nn.CrossEntropyLoss()
+
+    def forward(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def compute_markov_loss(self, z0, z1, a):
+        # Inverse loss
+        log_pr_actions = self.inverse_model(z0, z1)
+        l_inverse = self.ce(input=log_pr_actions, target=a)
+
+        # Ratio loss
+        with torch.no_grad():
+            N = len(z1)
+            idx = torch.randperm(N) # shuffle indices of next states
+        z1_neg = z1.view(N,-1)[idx].view(z1.size())
+        # concatenate positive and negative examples
+        z0_extended = torch.cat([z0, z0], dim=0)
+        z1_pos_neg = torch.cat([z1, z1_neg], dim=0)
+        is_real_transition = torch.cat([torch.ones(N), torch.zeros(N)], dim=0)
+        log_pr_real = self.discriminator(z0_extended, z1_pos_neg)
+        l_ratio = self.bce(input=log_pr_real, target=is_real_transition.float())
+
+        markov_loss = l_inverse + l_ratio
+        return markov_loss
