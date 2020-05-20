@@ -20,10 +20,7 @@ from test import test
 parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--env',
-                    type=str,
-                    required=True,
-                    help='ATARI game')
+parser.add_argument('--env', type=str, required=True, help='ATARI game')
 parser.add_argument('--T-max',
                     type=int,
                     default=int(400e3),
@@ -84,18 +81,18 @@ parser.add_argument('--replay-frequency',
                     default=1,
                     metavar='k',
                     help='Frequency of sampling from memory')
-parser.add_argument(
-    '--priority-exponent',
-    type=float,
-    default=0.5,
-    metavar='ω',
-    help='Prioritised experience replay exponent (originally denoted α)')
-parser.add_argument(
-    '--priority-weight',
-    type=float,
-    default=0.4,
-    metavar='β',
-    help='Initial prioritised experience replay importance sampling weight')
+parser.add_argument('--priority-exponent',
+                    type=float,
+                    default=0.5,
+                    metavar='ω',
+                    help='Prioritised experience replay exponent \
+            (originally denoted α)')
+parser.add_argument('--priority-weight',
+                    type=float,
+                    default=0.4,
+                    metavar='β',
+                    help='Initial prioritised experience replay \
+            importance sampling weight')
 parser.add_argument('--multi-step',
                     type=int,
                     default=20,
@@ -106,12 +103,11 @@ parser.add_argument('--discount',
                     default=0.99,
                     metavar='γ',
                     help='Discount factor')
-parser.add_argument(
-    '--target-update',
-    type=int,
-    default=int(2000),
-    metavar='τ',
-    help='Number of steps after which to update target network')
+parser.add_argument('--target-update',
+                    type=int,
+                    default=int(2000),
+                    metavar='τ',
+                    help='Number of steps after which to update target network')
 parser.add_argument('--reward-clip',
                     type=int,
                     default=1,
@@ -160,18 +156,16 @@ parser.add_argument('--render',
 parser.add_argument('--enable-cudnn',
                     action='store_true',
                     help='Enable cuDNN (faster but nondeterministic)')
-parser.add_argument(
-    '--checkpoint-interval',
-    default=0,
-    type=int,
-    help='How often to checkpoint the model, defaults to 0 (never checkpoint)')
+parser.add_argument('--checkpoint-interval',
+                    default=0,
+                    type=int,
+                    help='How often to checkpoint the model, \
+            defaults to 0 (never checkpoint)')
 parser.add_argument('--memory', help='Path to save/load the memory from')
-parser.add_argument(
-    '--disable-bzip-memory',
-    action='store_true',
-    help=
-    'Don\'t zip the memory file. Not recommended (zipping is a bit slower and much, much smaller)'
-)
+parser.add_argument('--disable-bzip-memory',
+                    action='store_true',
+                    help='Don\'t zip the memory file. Not recommended \
+            (zipping is a bit slower and much, much smaller)')
 parser.add_argument('--uuid',
                     help="""UUID for the experient run.
                     `env` uses environment name,
@@ -315,8 +309,8 @@ else:
 
             if T % args.evaluation_interval == 0:
                 dqn.eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = test(args, test_env, T, dqn, val_mem, metrics,
-                                         results_dir)  # Test
+                avg_reward, avg_Q = test(args, test_env, T, dqn, val_mem,
+                                         metrics, results_dir)  # Test
                 log('T = ' + str(T) + ' / ' + str(args.T_max) +
                     ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' +
                     str(avg_Q))
@@ -324,7 +318,8 @@ else:
 
                 # If memory path provided, save it
                 if args.memory is not None:
-                    save_memory(mem, f"{results_dir}/{args.memory}", args.disable_bzip_memory)
+                    save_memory(mem, f"{results_dir}/{args.memory}",
+                                args.disable_bzip_memory)
 
             # Update target network
             if T % args.target_update == 0:
