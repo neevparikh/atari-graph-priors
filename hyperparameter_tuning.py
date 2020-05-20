@@ -14,12 +14,15 @@ SEEDS_PER_RUN = 3
 default_args = [
 # Select an environment
 #    "--env", "PongNoFrameskip-v4",
-    "--env", "SeaquestNoFrameskip-v4",
+#    "--env", "SeaquestNoFrameskip-v4",
 #    "--env", "BreakoutNoFrameskip-v4",
 #    "--env", "QbertNoFrameskip-v4",
 #    "--env", "MsPacmanNoFrameskip-v4",
+# Select a mode
+#    "--architecture", "data-efficient",
+#    "--architecture", "ari",
+#    "--architecture", "ram",
 # Other args
-    "--architecture", "data-efficient",
     "--enable-cudnn",
     "--checkpoint-interval", "100000",
     "--memory", "replay_memory.mem"
