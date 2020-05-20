@@ -17,6 +17,7 @@ from memory import ReplayMemory
 from test import test
 
 # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
+# yapf: disable
 parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
@@ -86,13 +87,13 @@ parser.add_argument('--priority-exponent',
                     default=0.5,
                     metavar='ω',
                     help='Prioritised experience replay exponent \
-            (originally denoted α)')
+            (originally denoted α)'                                   )
 parser.add_argument('--priority-weight',
                     type=float,
                     default=0.4,
                     metavar='β',
                     help='Initial prioritised experience replay \
-            importance sampling weight')
+            importance sampling weight'                                       )
 parser.add_argument('--multi-step',
                     type=int,
                     default=20,
@@ -165,7 +166,7 @@ parser.add_argument('--checkpoint-interval',
                     default=0,
                     type=int,
                     help='How often to checkpoint the model, \
-            defaults to 0 (never checkpoint)')
+            defaults to 0 (never checkpoint)'                                             )
 parser.add_argument('--memory', help='Path to save/load the memory from')
 parser.add_argument('--phi-net-path',
                     type=str,
@@ -173,7 +174,7 @@ parser.add_argument('--phi-net-path',
 parser.add_argument('--disable-bzip-memory',
                     action='store_true',
                     help='Don\'t zip the memory file. Not recommended \
-            (zipping is a bit slower and much, much smaller)')
+            (zipping is a bit slower and much, much smaller)'                                                             )
 parser.add_argument('--uuid',
                     help="""UUID for the experient run.
                     `env` uses environment name,
@@ -187,7 +188,7 @@ parser.add_argument('--uuid',
                     default='env',
                     type=str,
                     required=False)
-
+# yapf: enable
 # Setup
 args = parser.parse_args()
 
@@ -211,12 +212,7 @@ for k, v in vars(args).items():
 results_dir = os.path.join('results', run_tag)
 if not os.path.exists(results_dir):
     os.makedirs(results_dir)
-metrics = {
-    'steps': [],
-    'rewards': [],
-    'Qs': [],
-    'best_avg_reward': -float('inf')
-}
+metrics = {'steps': [], 'rewards': [], 'Qs': [], 'best_avg_reward': -float('inf')}
 
 
 # Simple ISO 8601 timestamped logger
@@ -277,14 +273,9 @@ while T < args.evaluation_size:
 
 if args.evaluate:
     dqn.eval()  # Set DQN (online network) to evaluation mode
-    avg_reward, avg_Q = test(args,
-                             test_env,
-                             0,
-                             dqn,
-                             val_mem,
-                             metrics,
-                             results_dir,
-                             evaluate=True)  # Test
+    avg_reward, avg_Q = test(
+        args, test_env, 0, dqn, val_mem, metrics, results_dir, evaluate=True
+    )  # Test
     print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
 else:
     # Training loop
@@ -297,45 +288,42 @@ else:
         if T % args.replay_frequency == 0:
             dqn.reset_noise()  # Draw a new set of noisy weights
 
-        action = dqn.act(
-            state)  # Choose an action greedily (with noisy weights)
+        action = dqn.act(state)  # Choose an action greedily (with noisy weights)
         next_state, reward, done, _ = env.step(action)  # Step
         if args.reward_clip > 0:
-            reward = max(min(reward, args.reward_clip),
-                         -args.reward_clip)  # Clip rewards
+            reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
         mem.append(state, action, reward, done)  # Append transition to memory
 
         # Train and test
         if T >= args.learn_start:
             mem.priority_weight = min(
-                mem.priority_weight + priority_weight_increase,
-                1)  # Anneal importance sampling weight β to 1
+                mem.priority_weight + priority_weight_increase, 1
+            )  # Anneal importance sampling weight β to 1
 
             if T % args.replay_frequency == 0:
-                dqn.learn(
-                    mem)  # Train with n-step distributional double-Q learning
+                dqn.learn(mem)  # Train with n-step distributional double-Q learning
 
             if T % args.evaluation_interval == 0:
                 dqn.eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = test(args, test_env, T, dqn, val_mem,
-                                         metrics, results_dir)  # Test
-                log('T = ' + str(T) + ' / ' + str(args.T_max) +
-                    ' | Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' +
-                    str(avg_Q))
+                avg_reward, avg_Q = test(
+                    args, test_env, T, dqn, val_mem, metrics, results_dir
+                )  # Test
+                log(
+                    'T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' +
+                    str(avg_reward) + ' | Avg. Q: ' + str(avg_Q)
+                )
                 dqn.train()  # Set DQN (online network) back to training mode
 
                 # If memory path provided, save it
                 if args.memory is not None:
-                    save_memory(mem, f"{results_dir}/{args.memory}",
-                                args.disable_bzip_memory)
+                    save_memory(mem, f"{results_dir}/{args.memory}", args.disable_bzip_memory)
 
             # Update target network
             if T % args.target_update == 0:
                 dqn.update_target_net()
 
             # Checkpoint the network
-            if (args.checkpoint_interval !=
-                    0) and (T % args.checkpoint_interval == 0):
+            if (args.checkpoint_interval != 0) and (T % args.checkpoint_interval == 0):
                 dqn.save(results_dir, 'checkpoint.pth')
 
         state = next_state
