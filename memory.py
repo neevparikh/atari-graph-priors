@@ -134,16 +134,14 @@ class ReplayMemory():
     def _get_sample_from_segment(self, segment, i):
         valid = False
         while not valid:
-            sample = np.random.uniform(
-                i * segment, (i + 1) * segment
-            )  # Uniformly sample an element from within a segment
-            prob, idx, tree_idx = self.transitions.find(
-                sample
-            )  # Retrieve sample from tree with un-normalised probability
+            # Uniformly sample an element from within a segment
+            sample = np.random.uniform(i * segment, (i + 1) * segment)
+            # Retrieve sample from tree with un-normalised probability
+            prob, idx, tree_idx = self.transitions.find(sample)
             # Resample if transition straddled current index or probablity 0
-            if (self.transitions.index - idx) % self.capacity > self.n and (
-                idx - self.transitions.index
-            ) % self.capacity >= self.history and prob != 0:
+            if ((self.transitions.index - idx) % self.capacity > self.n
+                and (idx - self.transitions.index) % self.capacity >= self.history
+                and prob != 0):
                 valid = True  # Note that conditions are valid but extra conservative around buffer index 0
 
         # Retrieve all required transition data (from t - h to t + n)
@@ -179,22 +177,24 @@ class ReplayMemory():
         return prob, idx, tree_idx, state, action, R, next_state, nonterminal
 
     def sample(self, batch_size):
-        p_total = self.transitions.total(
-        )  # Retrieve sum of all priorities (used to create a normalised probability distribution)
-        segment = p_total / batch_size  # Batch size number of segments, based on sum over all probabilities
-        batch = [
-            self._get_sample_from_segment(segment, i) for i in range(batch_size)
-        ]  # Get batch of valid samples
+        # Retrieve sum of all priorities (used to create a normalised probability distribution)
+        p_total = self.transitions.total()
+        # Batch size number of segments, based on sum over all probabilities
+        segment = p_total / batch_size
+        # Get batch of valid samples
+        batch = [self._get_sample_from_segment(segment, i) for i in range(batch_size)]
         probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals = zip(*batch)
         states, next_states, = torch.stack(states), torch.stack(next_states)
-        actions, returns, nonterminals = torch.cat(actions), torch.cat(returns
-                                                                      ), torch.stack(nonterminals)
-        probs = np.array(probs, dtype=np.float32) / p_total  # Calculate normalised probabilities
+        actions, returns, nonterminals = tuple(
+            torch.cat(actions), torch.cat(returns), torch.stack(nonterminals)
+        )
+        # Calculate normalised probabilities
+        probs = np.array(probs, dtype=np.float32) / p_total
         capacity = self.capacity if self.transitions.full else self.transitions.index
-        weights = (capacity * probs)**-self.priority_weight  # Compute importance-sampling weights w
-        weights = torch.tensor(
-            weights / weights.max(), dtype=torch.float32, device=self.device
-        )  # Normalise by max importance-sampling weight from batch
+        # Compute importance-sampling weights w
+        weights = (capacity * probs)**-self.priority_weight
+        # Normalise by max importance-sampling weight from batch
+        weights = torch.tensor( weights / weights.max(), dtype=torch.float32, device=self.device)
         return tree_idxs, states, actions, returns, next_states, nonterminals, weights
 
     def update_priorities(self, idxs, priorities):
