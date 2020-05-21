@@ -70,6 +70,47 @@ class NoisyLinear(nn.Module):
         else:
             return F.linear(input, self.weight_mu, self.bias_mu)
 
+def build_phi_network(args, input_shape=None):
+    if args.architecture == 'canonical':
+        output_size = 3136
+        phi = nn.Sequential(
+            nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, stride=1, padding=0),
+            nn.ReLU(),
+            Reshape(-1, output_size))
+
+    elif args.architecture in ['ari','ram']:
+        assert input_shape is not None, 'Must specify input_shape for this architecture'
+        shape_flat = torch.prod(torch.as_tensor(input_shape))
+        output_size = 576
+        layers = [Reshape(-1, shape_flat), nn.Linear(shape_flat, output_size)]
+        phi = nn.Sequential(*layers)
+
+    elif args.architecture in ['data-efficient', 'online']:
+        output_size = 576
+        phi = nn.Sequential(
+            nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 5, stride=5, padding=0),
+            nn.ReLU(),
+            Reshape(-1, output_size))
+
+    elif args.architecture == 'pretrained':
+        assert args.phi_net_path is not None, 'Must specify path to feature network'
+        # Always load tensors onto CPU by default, will shift to GPU if necessary
+        phi, output_size = torch.load(args.phi_net_path, map_location='cpu')
+        phi = phi.to(device=args.device)
+        for param in phi.parameters():
+            param.requires_grad = False
+
+    else:
+        raise ValueError('Invalid architecture: {}'.format(args.architecture))
+
+    return phi, output_size
+
 class DQN(nn.Module):
     def __init__(self, args, observation_space, action_space):
         super(DQN, self).__init__()
@@ -77,7 +118,8 @@ class DQN(nn.Module):
         self.state_space = observation_space
         self.action_space = action_space
 
-        self.phi, self.feature_size = self.get_phi(args)
+        self.phi, self.feature_size = build_phi_network(args,
+            input_shape=self.state_space.shape)
         if args.architecture == 'online':
             self.markov_head = MarkovHead(args, self.feature_size, action_space)
         self.fc_h_v = NoisyLinear(self.feature_size,
@@ -96,47 +138,6 @@ class DQN(nn.Module):
         trainable_parameters = sum(
             p.numel() for p in self.parameters() if p.requires_grad)
         print(f"Number of trainable parameters: {trainable_parameters}")
-
-    def get_phi(self, args):
-        if args.architecture == 'canonical':
-            output_size = 3136
-            phi = nn.Sequential(
-                nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0),
-                nn.ReLU(),
-                nn.Conv2d(32, 64, 4, stride=2, padding=0),
-                nn.ReLU(),
-                nn.Conv2d(64, 64, 3, stride=1, padding=0),
-                nn.ReLU(),
-                Reshape(-1, output_size))
-
-        elif args.architecture in ['ari','ram']:
-            input_shape = self.state_space.shape
-            shape_flat = torch.prod(torch.as_tensor(input_shape))
-            output_size = 576
-            layers = [Reshape(-1, shape_flat), nn.Linear(shape_flat, output_size)]
-            phi = nn.Sequential(*layers)
-
-        elif args.architecture in ['data-efficient', 'online']:
-            output_size = 576
-            phi = nn.Sequential(
-                nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
-                nn.ReLU(),
-                nn.Conv2d(32, 64, 5, stride=5, padding=0),
-                nn.ReLU(),
-                Reshape(-1, output_size))
-
-        elif args.architecture == 'pretrained':
-            assert args.phi_net_path is not None, 'Must specify path to feature network'
-            # Always load tensors onto CPU by default, will shift to GPU if necessary
-            phi, output_size = torch.load(args.phi_net_path, map_location='cpu')
-            phi = phi.to(device=args.device)
-            for param in phi.parameters():
-                param.requires_grad = False
-
-        else:
-            raise ValueError('Invalid architecture: {}'.format(args.architecture))
-
-        return phi, output_size
 
     def save_phi(self, path, name):
         full_path = os.path.join(path, name)
