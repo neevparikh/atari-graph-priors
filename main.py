@@ -10,7 +10,7 @@ import torch
 from tqdm import trange
 
 from agent import Agent
-from env import get_env
+from env import get_train_test_envs, get_run_tag
 from memory import ReplayMemory, load_memory, save_memory
 from test import test
 
@@ -109,7 +109,8 @@ np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 
 # Environment
-env, test_env, run_tag = get_env(args)
+env, test_env = get_train_test_envs(args)
+run_tag = get_run_tag(args)
 action_space = env.action_space.n
 
 print(' ' * 26 + 'Options')

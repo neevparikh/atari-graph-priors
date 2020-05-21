@@ -185,9 +185,8 @@ class ReplayMemory():
         batch = [self._get_sample_from_segment(segment, i) for i in range(batch_size)]
         probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals = zip(*batch)
         states, next_states, = torch.stack(states), torch.stack(next_states)
-        actions, returns, nonterminals = tuple(
-            torch.cat(actions), torch.cat(returns), torch.stack(nonterminals)
-        )
+        actions, returns = torch.cat(actions), torch.cat(returns)
+        nonterminals = torch.stack(nonterminals)
         # Calculate normalised probabilities
         probs = np.array(probs, dtype=np.float32) / p_total
         capacity = self.capacity if self.transitions.full else self.transitions.index
