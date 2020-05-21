@@ -1,11 +1,29 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
+import bz2
 from collections import namedtuple
 import numpy as np
+import pickle
 import torch
 
 Transition = namedtuple('Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal'))
 
+
+def load_memory(memory_path, disable_bzip):
+    if disable_bzip:
+        with open(memory_path, 'rb') as pickle_file:
+            return pickle.load(pickle_file)
+    else:
+        with bz2.open(memory_path, 'rb') as zipped_pickle_file:
+            return pickle.load(zipped_pickle_file)
+
+def save_memory(memory, memory_path, disable_bzip):
+    if disable_bzip:
+        with open(memory_path, 'wb') as pickle_file:
+            pickle.dump(memory, pickle_file)
+    else:
+        with bz2.open(memory_path, 'wb') as zipped_pickle_file:
+            pickle.dump(memory, zipped_pickle_file)
 
 # Segment tree data structure where parent node values are sum/max of children node values
 class SegmentTree():

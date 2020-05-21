@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import argparse
-import bz2
 from datetime import datetime
 import os
-import pickle
 
 import atari_py
 import numpy as np
@@ -13,7 +11,7 @@ from tqdm import trange
 
 from agent import Agent
 from env import get_env
-from memory import ReplayMemory
+from memory import ReplayMemory, load_memory, save_memory
 from test import test
 
 # Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
@@ -126,24 +124,6 @@ metrics = {'steps': [], 'rewards': [], 'Qs': [], 'best_avg_reward': -float('inf'
 # Simple ISO 8601 timestamped logger
 def log(s):
     print('[' + str(datetime.now().strftime('%Y-%m-%dT%H:%M:%S')) + '] ' + s)
-
-
-def load_memory(memory_path, disable_bzip):
-    if disable_bzip:
-        with open(memory_path, 'rb') as pickle_file:
-            return pickle.load(pickle_file)
-    else:
-        with bz2.open(memory_path, 'rb') as zipped_pickle_file:
-            return pickle.load(zipped_pickle_file)
-
-
-def save_memory(memory, memory_path, disable_bzip):
-    if disable_bzip:
-        with open(memory_path, 'wb') as pickle_file:
-            pickle.dump(memory, pickle_file)
-    else:
-        with bz2.open(memory_path, 'wb') as zipped_pickle_file:
-            pickle.dump(memory, zipped_pickle_file)
 
 
 # Agent
