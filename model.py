@@ -113,7 +113,8 @@ class DQN(nn.Module):
             input_shape = self.state_space.shape
             shape_flat = torch.prod(torch.as_tensor(input_shape))
             output_size = 576
-            layers = [Reshape(-1, shape_flat), nn.Linear(shape_flat, output_size)]
+            layers = [Reshape(-1, shape_flat), nn.Linear(shape_flat, 128), nn.ReLU(),
+                    nn.Linear(128, output_size), nn.ReLU()]
             phi = nn.Sequential(*layers)
 
         elif args.architecture in ['data-efficient', 'online']:

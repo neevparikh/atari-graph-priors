@@ -10,19 +10,19 @@ from ccv_script import run as run_ccv
 # Tuning hyperparameters
 
 SEED_START = 0
-SEEDS_PER_RUN = 1
+SEEDS_PER_RUN = 3
 
 # Program args
 default_args = [
 # Select an environment
-    "--env", "PongNoFrameskip-v4",
+#    "--env", "PongNoFrameskip-v4",
 #    "--env", "SeaquestNoFrameskip-v4",
 #    "--env", "BreakoutNoFrameskip-v4",
 #    "--env", "QbertNoFrameskip-v4",
 #    "--env", "MsPacmanNoFrameskip-v4",
 # Select a mode
 #    "--architecture", "data-efficient",
-    "--architecture", "ari",
+#    "--architecture", "ari",
 #    "--architecture", "online",
 #    "--architecture", "ram",
 # Other args
@@ -32,7 +32,7 @@ default_args = [
 ]
 
 # Values to tune
-tuning_values = {"--learning-rate": ["0.001", "0.0003"]}
+tuning_values = {"--learning-rate": ["0.0001"]}
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -55,7 +55,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
     elif grid_type == "csgrid":
         cluster_args = [
             "--jobtype", "gpu",
-            "--mem", "13",
+            "--mem", "5",
             "--nresources", "1",
             "--env", ENV_PATH,
         ]
