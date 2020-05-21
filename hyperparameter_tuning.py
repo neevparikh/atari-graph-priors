@@ -10,16 +10,16 @@ from ccv_script import run as run_ccv
 # Tuning hyperparameters
 
 SEED_START = 0
-SEEDS_PER_RUN = 3
+SEEDS_PER_RUN = 1
 
 # Program args
 default_args = [
 # Select an environment
-#    "--env", "PongNoFrameskip-v4",
+    "--env", "PongNoFrameskip-v4",
 #    "--env", "SeaquestNoFrameskip-v4",
 #    "--env", "BreakoutNoFrameskip-v4",
 #    "--env", "QbertNoFrameskip-v4",
-    "--env", "MsPacmanNoFrameskip-v4",
+#    "--env", "MsPacmanNoFrameskip-v4",
 # Select a mode
 #    "--architecture", "data-efficient",
     "--architecture", "ari",
@@ -27,14 +27,12 @@ default_args = [
 #    "--architecture", "ram",
 # Other args
     "--enable-cudnn",
-    "--checkpoint-interval",
-    "100000",
-    "--memory",
-    "replay_memory.mem"
+    "--checkpoint-interval", "100000",
+    "--memory", "replay_memory.mem"
 ]
 
 # Values to tune
-tuning_values = {"--learning-rate": ["0.0001"]}
+tuning_values = {"--learning-rate": ["0.001", "0.0003"]}
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -50,7 +48,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
         cluster_args = [
             "--cpus", "6",
             "--gpus", "1",
-            "--mem", "3",
+            "--mem", "5",
             "--env", ENV_PATH,
             "--duration", "medium",
         ]
@@ -75,8 +73,9 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
                 run_args += ["--uuid", run_tag]
                 run_args += ["--seed", str(seed)]
                 cmd = "python main.py " + ' '.join(run_args)
-                jobname = f"{default_args[1].replace('-', '_')}_{run_tag.replace('-','_')}_seed_{str(seed)}"
+                jobname = f"{default_args[1].replace('-', '_')}_{run_tag.replace('-','_')}"
                 jobname += '_ari' if default_args[3] == 'ari' else ''
+                jobname += f"_seed_{str(seed)}"
                 if grid_type != "no_grid":
                     cmd = "unbuffer " + cmd
                     cluster_args += ["--command", cmd]
