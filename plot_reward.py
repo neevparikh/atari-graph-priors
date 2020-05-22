@@ -92,6 +92,7 @@ def plot(data, envs, lr, arch, seed_type, savepath=None, show=True):
                         height=height,
                         aspect=1.5,
                         col='env',
+                        col_wrap=2,
                         facet_kws={'sharey': False})
 
     elif seed_type == 'all':
@@ -107,6 +108,7 @@ def plot(data, envs, lr, arch, seed_type, savepath=None, show=True):
                         height=height,
                         aspect=1.5,
                         col='env',
+                        col_wrap=2,
                         facet_kws={'sharey': False})
     else:
         raise ValueError(f"{seed_type} not a recognized choice")
