@@ -65,7 +65,7 @@ def plot(data, envs, lr, arch, seed_type, savepath=None, show=True):
     print(f"Plotting using {envs}, {lr}, {arch}, {seed_type}")
 
     # If asking for multiple envs, use facetgrid and adjust height
-    height = 3 if len(envs) > 3 else 5
+    height = 3 if len(envs) > 2 else 5
 
     # If multiple lr and arch, set hue and style accordingly
     if len(lr) > 1 and len(arch) > 1:
