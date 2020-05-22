@@ -20,12 +20,15 @@ def make_ram(env, num_frames, training=False):
         env = EpisodicLifeEnv(env)
     return FrameStack(env, num_frames)
 
-
 def make_ari(env, num_frames, training=False):
     """ Wrap env in reset to match observation """
     if training:
         env = EpisodicLifeEnv(env)
     return FrameStack(ResetARI(AtariARIWrapper(env)), num_frames)
+
+def make_ari_onehot(env, num_frames, training=False):
+    """ Wrap env in reset to match observation and onehot """
+    pass
 
 
 def get_env(args):
@@ -50,6 +53,9 @@ def get_env(args):
     elif args.architecture == 'ari':
         env = make_ari(env, args.history_length, training=True)
         test_env = make_ari(test_env, args.history_length, training=False)
+    elif args.architecture == 'ari-onehot':
+        env = make_ari_onehot(env, args.history_length, training=True)
+        test_env = make_ari_onehot(test_env, args.history_length, training=False)
     else:
         env = make_atari(env, args.history_length, training=True)
         test_env = make_atari(test_env, args.history_length, training=False)

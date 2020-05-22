@@ -29,7 +29,7 @@ parser.add_argument('--max-episode-length', type=int, default=int(108e3), metava
 parser.add_argument('--history-length', type=int, default=4, metavar='T',
                     help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='data-efficient', metavar='ARCH',
-                    choices=['canonical', 'data-efficient', 'ari', 'ram', 'pretrained', 'online'],
+                    choices=['canonical', 'data-efficient', 'ari', 'ari-onehot', 'ram', 'pretrained', 'online'],
                     help='Network architecture')
 parser.add_argument('--hidden-size', type=int, default=256, metavar='SIZE',
                     help='Network hidden size')
