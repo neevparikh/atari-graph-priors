@@ -149,7 +149,7 @@ class Agent():
         rainbow_loss = self.loss(batch)
         loss = (weights * rainbow_loss).mean()
         if self.architecture == 'online':
-            loss += self.markov_loss_coef * markov_loss(batch)
+            loss += self.markov_loss_coef * self.markov_loss(batch)
         self.online_net.zero_grad()
         # Backpropagate importance-weighted minibatch loss
         loss.backward()
