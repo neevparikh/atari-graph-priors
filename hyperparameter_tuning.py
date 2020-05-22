@@ -68,14 +68,13 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
         for i, (arg, value_range) in enumerate(tuning_values.items()):
             for value in value_range:
                 run_args = default_args + [arg, value]
-                clean_arg_name = arg.strip('-').replace('-', '_')
-                run_tag = f"{clean_arg_name}_{value}"
+                clean_arg_name = arg.strip('-').replace('-', '').replace('_', '')
+                run_tag = f"{clean_arg_name}-{value}_arch-{default_args[3]}"
                 run_args += ["--uuid", run_tag]
                 run_args += ["--seed", str(seed)]
                 cmd = "python main.py " + ' '.join(run_args)
-                jobname = f"{default_args[1].replace('-', '_')}_{run_tag.replace('-','_')}"
-                jobname += '_ari' if default_args[3] == 'ari' else ''
-                jobname += f"_seed_{str(seed)}"
+                jobname = f"{default_args[1]}_{run_tag}"
+                jobname += f"_seed-{str(seed)}"
                 if grid_type != "no_grid":
                     cmd = "unbuffer " + cmd
                     cluster_args += ["--command", cmd]
