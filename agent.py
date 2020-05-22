@@ -131,7 +131,7 @@ class Agent():
         return loss
     # yapf: enable
 
-    def markov_loss(batch):
+    def markov_loss(self, batch):
         _, states, actions, _, next_states, _, _ = batch
         markov_loss = self.online_net.markov_head.compute_markov_loss(
             z0 = self.online_net.phi(states),
