@@ -147,7 +147,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     if args.create_csv:
-        print("Recreating results directory")
+        print("Recreating csv in results directory")
         df = collate_results(args.results_dir)
         df.to_csv(os.path.join(args.results_dir, 'combined.csv'))
 
