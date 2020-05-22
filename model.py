@@ -109,7 +109,7 @@ class DQN(nn.Module):
                 nn.ReLU(),
                 Reshape(-1, output_size))
 
-        elif args.architecture in ['ari','ram']:
+        elif args.architecture in ['ari', 'ari-onehot', 'ram']:
             input_shape = self.state_space.shape
             shape_flat = torch.prod(torch.as_tensor(input_shape))
             output_size = 576
