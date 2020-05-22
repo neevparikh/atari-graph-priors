@@ -88,15 +88,18 @@ ENV/
 # Rope project settings
 .ropeproject
 
-
-# Saved models
-*.pth
-# Plots
-*.html
+# block everything except metrics.pth
+results/**/*.html
+results/**/*.mem
+results/**/model.pth
+results/**/phi_model.pth
+results/**/checkpoint.pth
+results/**/phi_checkpoint.pth
+results/**/*.csv
+results/plots/
 
 jobs/ 
 slurm/ 
 gridengine/ 
-results/ 
 
 setup.cfg
