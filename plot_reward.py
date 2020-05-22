@@ -11,14 +11,17 @@ sns.set(style="darkgrid")
 def parse_filepath(fp):
     fp = os.path.split(fp)[1]
     tags = fp.split('_')
-    assert len(tags) == 4, f"Error in parsing filepath {fp}"
-    metadata = {
-        "env": tags[0],
-        "lr": tags[1].split('-')[1],
-        "arch": tags[2].split('-')[1],
-        "seed": tags[3].split('-')[1],
-    }
-    return metadata
+    if len(tags) == 4:
+        metadata = {
+            "env": tags[0],
+            "lr": tags[1].split('-')[1],
+            "arch": tags[2].split('-')[1],
+            "seed": tags[3].split('-')[1],
+        }
+        return metadata
+    else:
+        print(f"Error in parsing filepath {fp}")
+        return None
 
 
 def collate_results(results_dir):
@@ -26,6 +29,8 @@ def collate_results(results_dir):
     for run in glob.glob(results_dir + '/*'):
         print(f"Found {run}")
         metadata = parse_filepath(run)
+        if metadata is None:
+            continue
         metrics_path = os.path.join(run, 'metrics.pth')
         metrics = torch.load(metrics_path)
         del metrics['best_avg_reward']
@@ -144,6 +149,6 @@ if __name__ == "__main__":
 
     if not args.no_plot:
         if args.save_path:
-            os.makedirs(os.path.join(args.results_dir, args.save_path), exist_ok=True)
+            os.makedirs(os.path.split(args.save_path)[0], exist_ok=True)
         df = pd.read_csv(os.path.join(args.results_dir, 'combined.csv'))
         plot(df, args.envs, args.lr, args.arch, args.seed, args.save_path)
