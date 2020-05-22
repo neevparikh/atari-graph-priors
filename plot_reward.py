@@ -47,7 +47,7 @@ def collate_results(results_dir):
     return pd.DataFrame(df)
 
 
-def plot(data, envs, lr, arch, seed_type, savepath=None):
+def plot(data, envs, lr, arch, seed_type, savepath=None, show=True):
     # Filter based on input
     if envs:
         data = data[data['env'].isin(envs)]
@@ -114,7 +114,8 @@ def plot(data, envs, lr, arch, seed_type, savepath=None):
     if savepath is not None:
         g.savefig(savepath)
 
-    plt.show()
+    if show:
+        plt.show()
 
 
 def parse_args():
@@ -134,6 +135,7 @@ def parse_args():
             default='average')
     parser.add_argument('--save-path', help='Save the plot here', type=str)
     parser.add_argument('--no-plot', help='No plots', action='store_true')
+    parser.add_argument('--no-show', help='Does not show plots', action='store_true')
     # yapf: enable
 
     return parser.parse_args()
@@ -151,4 +153,4 @@ if __name__ == "__main__":
         if args.save_path:
             os.makedirs(os.path.split(args.save_path)[0], exist_ok=True)
         df = pd.read_csv(os.path.join(args.results_dir, 'combined.csv'))
-        plot(df, args.envs, args.lr, args.arch, args.seed, args.save_path)
+        plot(df, args.envs, args.lr, args.arch, args.seed, args.save_path, not args.no_show)
