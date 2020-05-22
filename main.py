@@ -155,8 +155,7 @@ if args.model is not None and not args.evaluate:
         raise ValueError('Cannot resume training without memory save path. Aborting...')
     elif not os.path.exists(args.memory):
         raise ValueError(
-            'Could not find memory file at {path}. Aborting...'.format(path=args.memory)
-        )
+            'Could not find memory file at {path}. Aborting...'.format(path=args.memory))
 
     mem = load_memory(args.memory, args.disable_bzip_memory)
 
@@ -204,9 +203,8 @@ else:
 
         # Train and test
         if T >= args.learn_start:
-            mem.priority_weight = min(
-                mem.priority_weight + priority_weight_increase, 1
-            )  # Anneal importance sampling weight β to 1
+            mem.priority_weight = min(mem.priority_weight + priority_weight_increase,
+                                      1)  # Anneal importance sampling weight β to 1
 
             if T % args.replay_frequency == 0:
                 dqn.learn(mem)  # Train with n-step distributional double-Q learning
@@ -216,10 +214,8 @@ else:
                 avg_reward, avg_Q = test(
                     args, test_env, T, dqn, val_mem, metrics, results_dir
                 )  # Test
-                log(
-                    'T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' +
-                    str(avg_reward) + ' | Avg. Q: ' + str(avg_Q)
-                )
+                log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' +
+                    str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 dqn.train()  # Set DQN (online network) back to training mode
 
                 # If memory path provided, save it
