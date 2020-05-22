@@ -69,7 +69,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
             for value in value_range:
                 run_args = default_args + [arg, value]
                 clean_arg_name = arg.strip('-').replace('-', '').replace('_', '')
-                run_tag = f"{clean_arg_name}-{value}_arch-{default_args[3]}"
+                run_tag = f"{clean_arg_name}-{value.replace('-', '')}_arch-{default_args[3]}"
                 run_args += ["--uuid", run_tag]
                 run_args += ["--seed", str(seed)]
                 cmd = "python main.py " + ' '.join(run_args)
