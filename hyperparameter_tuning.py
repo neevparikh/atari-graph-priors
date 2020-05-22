@@ -10,7 +10,7 @@ from ccv_script import run as run_ccv
 # Tuning hyperparameters
 
 SEED_START = 0
-SEEDS_PER_RUN = 3
+SEEDS_PER_RUN = 2
 
 # Program args
 default_args = [
@@ -25,14 +25,17 @@ default_args = [
 #    "--architecture", "ari",
 #    "--architecture", "online",
 #    "--architecture", "ram",
+# Online only
+#    "--markov-loss-coef", "1",
 # Other args
+    "--learning-rate", "0.0001",
     "--enable-cudnn",
     "--checkpoint-interval", "100000",
     "--memory", "replay_memory.mem"
 ]
 
 # Values to tune
-tuning_values = {"--learning-rate": ["0.0001"]}
+tuning_values = {"--markov-loss-coef": ["0.01", "0.1", "1.0"]}
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -48,14 +51,14 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
         cluster_args = [
             "--cpus", "6",
             "--gpus", "1",
-            "--mem", "5",
+            "--mem", "13",
             "--env", ENV_PATH,
             "--duration", "medium",
         ]
     elif grid_type == "csgrid":
         cluster_args = [
             "--jobtype", "gpu",
-            "--mem", "5",
+            "--mem", "13",
             "--nresources", "1",
             "--env", ENV_PATH,
         ]
