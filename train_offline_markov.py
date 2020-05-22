@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 import gym
 import numpy as np
@@ -12,6 +13,8 @@ from env import get_train_test_envs
 from model import build_phi_network, MarkovHead
 from memory import ReplayMemory, load_memory, save_memory
 
+if __name__ == '__main__' and 'ipykernel' in sys.argv[0]:
+    sys.argv[1:] = ['--env', 'QbertNoFrameskip-v4']
 parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
@@ -101,7 +104,7 @@ args.evaluation_interval = 10
 args.hidden_size = 256
 args.learning_rate = 0.003
 args.batch_size = 32
-args.model = 'results/ccv-2020-05-20-1910/QbertNoFrameskip-v4_learning_rate_0.0001_seed_2/model.pth'
+args.model = 'results/QbertNoFrameskip-v4_learningrate-0.0001_arch-dataefficient_seed-2/model.pth'
 args.memory_capacity = int(20e3)
 args.dqn_policy_epsilon = 0.05
 # args.memory = 'results/ccv-2020-05-20-1910/QbertNoFrameskip-v4_learning_rate_0.0001_seed_2/replay_memory.mem'
