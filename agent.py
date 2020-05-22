@@ -128,17 +128,17 @@ class Agent():
         # Cross-entropy loss (minimises DKL(m||p(s_t, a_t)))
         loss = -torch.sum(m * log_ps_a, 1)
 
-        if self.architecture == 'online':
-            phi = self.online_net.phi
-            markov_loss = self.online_net.markov_head.compute_markov_loss(
-                z0 = phi(states),
-                z1 = phi(next_states),
-                a = actions,
-            )
-            loss += self.markov_loss_coef * markov_loss
-
         return loss
     # yapf: enable
+
+    def markov_loss(batch):
+        _, states, actions, _, next_states, _, _ = batch
+        markov_loss = self.online_net.markov_head.compute_markov_loss(
+            z0 = self.online_net.phi(states),
+            z1 = self.online_net.phi(next_states),
+            a = actions,
+        )
+        return markov_loss
 
     def learn(self, mem):
         # Sample transitions
@@ -146,14 +146,17 @@ class Agent():
         idxs = batch[0]
         weights = batch[-1]
 
-        loss = self.loss(batch)
+        rainbow_loss = self.loss(batch)
+        loss = (weights * rainbow_loss).mean()
+        if self.architecture == 'online':
+            loss += self.markov_loss_coef * markov_loss(batch)
         self.online_net.zero_grad()
         # Backpropagate importance-weighted minibatch loss
-        (weights * loss).mean().backward()
+        loss.backward()
         self.optimiser.step()
 
         # Update priorities of sampled transitions
-        mem.update_priorities(idxs, loss.detach().cpu().numpy())
+        mem.update_priorities(idxs, rainbow_loss.detach().cpu().numpy())
 
     def update_target_net(self):
         self.target_net.load_state_dict(self.online_net.state_dict())
