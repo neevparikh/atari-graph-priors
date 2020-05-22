@@ -214,7 +214,7 @@ class MarkovHead(nn.Module):
         # concatenate positive and negative examples
         z0_extended = torch.cat([z0, z0], dim=0)
         z1_pos_neg = torch.cat([z1, z1_neg], dim=0)
-        is_real_transition = torch.cat([torch.ones(N), torch.zeros(N)], dim=0)
+        is_real_transition = torch.cat([torch.ones(N), torch.zeros(N)], dim=0).to(z0.device)
         log_pr_real = self.discriminator(z0_extended, z1_pos_neg)
         l_ratio = self.bce(input=log_pr_real, target=is_real_transition.unsqueeze(-1).float())
 
