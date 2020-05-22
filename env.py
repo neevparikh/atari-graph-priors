@@ -4,7 +4,7 @@ import torch
 import gym
 from atariari.benchmark.wrapper import AtariARIWrapper
 from gym_wrappers import FrameStack, MaxAndSkipEnv, AtariPreprocess, ResetARI, \
-    TorchWrapper, EpisodicLifeEnv
+    ResetARIOneHot, TorchWrapper, EpisodicLifeEnv
 
 
 def make_atari(env, num_frames, training=False):
@@ -28,7 +28,9 @@ def make_ari(env, num_frames, training=False):
 
 def make_ari_onehot(env, num_frames, training=False):
     """ Wrap env in reset to match observation and onehot """
-    pass
+    if training:
+        env = EpisodicLifeEnv(env)
+    return FrameStack(ResetARIOneHot(AtariARIWrapper(env)), num_frames)
 
 
 def get_env(args):

@@ -47,6 +47,47 @@ class ResetARI(gym.Wrapper):
         return next_state, reward, done, info
 
 
+# WARNING
+# Only works for env with 'player_x' and 'player_y' annotations
+class ResetARIOneHot(gym.Wrapper):
+    def __init__(self, env):
+        gym.Wrapper.__init__(self, env)
+
+        # change the observation space to accurately represent
+        # the shape of the labeled RAM observations
+        self.observation_space = gym.spaces.Box(
+            0,
+            255,  # max value
+            shape=(len(self.info_to_state(self.env.labels())),),
+            dtype=np.uint8)
+
+    def reset(self, **kwargs):
+        self.env.reset(**kwargs)
+        # reset the env and get the current labeled RAM
+        return self.info_to_state(self.env.labels())
+
+    def step(self, action):
+        # we don't need the obs here, just the labels in info
+        _, reward, done, info = self.env.step(action)
+        next_state = self.info_to_state(info['labels'])
+        return next_state, reward, done, info
+
+    def info_to_state(self, labels):
+        # one hot x and y position
+        x_one_hot = np.eye(256)[labels['player_x']]
+        y_one_hot = np.eye(256)[labels['player_y']]
+
+        # grab the rest of the labeled RAM out of info and put as next_state
+        next_state = []
+        for l in labels.keys():
+            if l == 'player_x' or l == 'player_y':
+                continue
+            next_state.append(labels[l])
+
+        # join one hot positions to labeled RAM
+        return np.concatenate((x_one_hot,y_one_hot,np.array(next_state)))
+
+
 # Adapted from OpenAI Baselines:
 # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
 class AtariPreprocess(gym.Wrapper):
