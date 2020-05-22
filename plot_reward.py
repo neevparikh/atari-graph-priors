@@ -7,6 +7,7 @@ import glob
 import os
 sns.set(style="darkgrid")
 
+
 def parse_filepath(fp):
     fp = os.path.split(fp)[1]
     tags = fp.split('_')
@@ -60,7 +61,7 @@ def plot(data, envs, lr, arch, seed_type, savepath=None):
 
     # If asking for multiple envs, use facetgrid and adjust height
     height = 3 if len(envs) > 3 else 5
-    
+
     # If multiple lr and arch, set hue and style accordingly
     if len(lr) > 1 and len(arch) > 1:
         hue = 'lr'
@@ -107,7 +108,7 @@ def plot(data, envs, lr, arch, seed_type, savepath=None):
 
     if savepath is not None:
         g.savefig(savepath)
-    
+
     plt.show()
 
 
