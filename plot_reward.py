@@ -75,7 +75,7 @@ def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
     else:
         arch = list(data['arch'].unique())
     if mlc:
-        data = data[data['markov_coef'].isin(lr)]
+        data = data[data['markov_coef'].isin(mlc)]
     else:
         mlc = list(data['markov_coef'].unique())
 
