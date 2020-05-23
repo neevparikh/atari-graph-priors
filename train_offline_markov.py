@@ -1,6 +1,8 @@
 import argparse
 import os
 import sys
+import random
+import pickle
 
 import gym
 import numpy as np
@@ -97,18 +99,19 @@ parser.add_argument('--uuid', default='env', type=str, required=False,
 # Setup
 args = parser.parse_args()
 
-args.overfit_one_batch = True
+args.overfit_one_batch = False
 args.architecture = 'data-efficient'
 args.n_training_steps = 1000
 args.evaluation_interval = 10
 args.hidden_size = 256
 args.learning_rate = 0.003
-args.batch_size = 32
-args.model = 'results/QbertNoFrameskip-v4_learningrate-0.0001_arch-dataefficient_seed-2/model.pth'
+args.batch_size = 2048
+args.model = './model.pth'
 args.memory_capacity = int(20e3)
-args.dqn_policy_epsilon = 0.05
+args.dqn_policy_epsilon = 1
+args.disable_cuda = True
 # args.memory = 'results/ccv-2020-05-20-1910/QbertNoFrameskip-v4_learning_rate_0.0001_seed_2/replay_memory.mem'
-args.memory = 'rainbow400K_for_20K.mem'
+args.memory = '20k_list.mem'
 
 if torch.cuda.is_available() and not args.disable_cuda:
     args.device = torch.device('cuda')
@@ -116,7 +119,7 @@ if torch.cuda.is_available() and not args.disable_cuda:
     torch.backends.cudnn.enabled = args.enable_cudnn
 else:
     args.device = torch.device('cpu')
-
+random.seed(args.seed)
 
 class FeatureNet(nn.Module):
     def __init__(self, args, action_space):
@@ -134,7 +137,11 @@ class FeatureNet(nn.Module):
         return self.phi(x)
 
     def loss(self, batch):
-        idxs, states, actions, returns, next_states, nonterminals, weights = batch
+        # idxs, states, actions, returns, next_states, nonterminals, weights = batch
+        states, actions, next_states, returns, dones = tuple(zip(*batch))
+        states = torch.stack(states)
+        actions = torch.as_tensor(actions)
+        next_states = torch.stack(next_states)
         markov_loss = self.markov_head.compute_markov_loss(
             z0 = self.phi(states),
             z1 = self.phi(next_states),
@@ -157,43 +164,56 @@ class FeatureNet(nn.Module):
 
 def generate_experiences(args, dqn, env, mem):
     state, done = env.reset(), False
-    for i in tqdm(range(args.memory_capacity)):
+    i = 0
+    pbar = tqdm(total = args.memory_capacity)
+    while i < args.memory_capacity: 
         if done:
             state, done = env.reset(), False
-        if np.random.rand() < args.dqn_policy_epsilon:
-            action = np.random.randint(0, env.action_space.n)
-        else:
-            action = dqn.act(state)
+        action = np.random.randint(0, env.action_space.n)
+        # if np.random.rand() < args.dqn_policy_epsilon:
+        #     action = np.random.randint(0, env.action_space.n)
+        # else:
+        #     action = dqn.act(state)
         next_state, reward, done, _ = env.step(action)
-        mem.append(state, action, reward, done)
+        if not done:
+            mem.append((state, action, next_state, reward, done))
+            i += 1
+            pbar.update(1)
         state = next_state
 
 def train():
     print('making env')
     env = get_train_test_envs(args)[0]
-    dqn = Agent(args, env)
-    dqn.eval()
+    # dqn = Agent(args, env)
+    # dqn.eval()
     network = FeatureNet(args, env.action_space.n)
 
     if os.path.exists(args.memory):
         print('loading experiences')
-        mem = load_memory(args.memory, disable_bzip=args.disable_bzip_memory)
+        # mem = load_memory(args.memory, disable_bzip=args.disable_bzip_memory)
+        with open(args.memory, "rb") as memory_file:
+            mem = pickle.load(memory_file)
     else:
         print('generating experiences')
-        mem = ReplayMemory(args, args.memory_capacity, env.env.observation_space.shape)
-        generate_experiences(args, dqn, env, mem)
-        save_memory(mem, args.memory, disable_bzip=args.disable_bzip_memory)
+        # mem = ReplayMemory(args, args.memory_capacity, env.env.observation_space.shape)
+        mem = []
+        generate_experiences(args, None, env, mem)
+        with open(args.memory, "wb") as memory_file:
+            pickle.dump(mem, memory_file)
+        # save_memory(mem, args.memory, disable_bzip=args.disable_bzip_memory)
 
     print('sampling')
-    batch = mem.sample(args.batch_size)
+    # batch = mem.sample(args.batch_size)
+    batch = random.sample(mem, args.batch_size)
     loss = 0
     print('training')
     for step in tqdm(range(args.n_training_steps)):
         if not args.overfit_one_batch and step > 0:
-            batch = mem.sample(args.batch_size)
+            # batch = mem.sample(args.batch_size)
+            batch = random.sample(mem, args.batch_size)
         loss += network.train_one_batch(batch)
         if (step + 1) % args.evaluation_interval == 0:
-            print(loss / args.evaluation_interval)
+            tqdm.write(str(loss / args.evaluation_interval))
             loss = 0
 
     model_filename = os.path.basename(args.model)
