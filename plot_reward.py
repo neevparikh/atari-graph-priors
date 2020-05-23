@@ -1,23 +1,36 @@
+import argparse
+import glob
+import os
+import sys
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-import argparse
 import torch
-import glob
-import os
 sns.set(style="darkgrid")
 
+default_lr = 0.0001
 
 def parse_filepath(fp):
     fp = os.path.split(fp)[1]
     tags = fp.split('_')
     if len(tags) == 4:
+        if tags[1].split('-')[0] == 'learningrate':
+            lr = tags[1].split('-')[1]
+        else:
+            lr = default_lr
+        arch = tags[2].split('-')[1]
+        if arch == 'online' and tags[1].split('-')[0] == 'markovlosscoef':
+            markov_metadata = {'markov_coef': tags[1].split('-')[1]}
+        else:
+            markov_metadata = {'markov_coef': 0.0}
         metadata = {
             "env": tags[0],
-            "lr": tags[1].split('-')[1],
-            "arch": tags[2].split('-')[1],
+            "lr": lr,
+            "arch": arch,
             "seed": tags[3].split('-')[1],
         }
+        metadata.update(markov_metadata)
         return metadata
     else:
         print(f"Error in parsing filepath {fp}")
@@ -47,7 +60,7 @@ def collate_results(results_dir):
     return pd.DataFrame(df)
 
 
-def plot(data, envs, lr, arch, seed_type, savepath=None, show=True):
+def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
     # Filter based on input
     if envs:
         data = data[data['env'].isin(envs)]
@@ -61,26 +74,35 @@ def plot(data, envs, lr, arch, seed_type, savepath=None, show=True):
         data = data[data['arch'].isin(arch)]
     else:
         arch = list(data['arch'].unique())
+    if mlc:
+        data = data[data['markov_coef'].isin(mlc)]
+    else:
+        mlc = list(data['markov_coef'].unique())
 
     print(f"Plotting using {envs}, {lr}, {arch}, {seed_type}")
 
     # If asking for multiple envs, use facetgrid and adjust height
     height = 3 if len(envs) > 2 else 5
-
+    col_wrap = 2 if len(envs) > 1 else 1
     # If multiple lr and arch, set hue and style accordingly
     if len(lr) > 1 and len(arch) > 1:
-        hue = 'lr'
-        style = 'arch'
+        hue = 'arch'
+        style = 'lr'
     elif len(lr) > 1 and len(arch) <= 1:
-        hue = 'lr'
-        style = None
+        hue = None
+        style = 'lr'
+    elif len(mlc) > 1 and len(arch) > 1:
+        hue = 'arch'
+        style = 'markov_coef'
+    elif len(mlc) > 1 and len(arch) <= 1:
+        hue = None
+        style = 'markov_coef'
     elif len(arch) > 1 and len(lr) <= 1:
         hue = 'arch'
         style = None
     else:
         hue = None
         style = None
-
     if seed_type == 'average':
         g = sns.relplot(x='frame',
                         y='average_reward',
@@ -92,7 +114,7 @@ def plot(data, envs, lr, arch, seed_type, savepath=None, show=True):
                         height=height,
                         aspect=1.5,
                         col='env',
-                        col_wrap=2,
+                        col_wrap=col_wrap,
                         facet_kws={'sharey': False})
 
     elif seed_type == 'all':
@@ -108,7 +130,7 @@ def plot(data, envs, lr, arch, seed_type, savepath=None, show=True):
                         height=height,
                         aspect=1.5,
                         col='env',
-                        col_wrap=2,
+                        col_wrap=col_wrap,
                         facet_kws={'sharey': False})
     else:
         raise ValueError(f"{seed_type} not a recognized choice")
@@ -132,6 +154,8 @@ def parse_args():
             action='store_true')
     parser.add_argument('--envs', help='Env to plot, empty means all', type=str, nargs='*')
     parser.add_argument('--lr', help='LRs to plot, empty means all', type=str, nargs='*')
+    parser.add_argument('--mlc', help='Markov loss coef to plot, empty means all', type=str,
+            nargs='*')
     parser.add_argument('--arch', help='Arch to plot, empty means all', type=str, nargs='*')
     parser.add_argument('--seed', help='How to handle seeds', type=str, choices=['average', 'all'],
             default='average')
@@ -155,4 +179,5 @@ if __name__ == "__main__":
         if args.save_path:
             os.makedirs(os.path.split(args.save_path)[0], exist_ok=True)
         df = pd.read_csv(os.path.join(args.results_dir, 'combined.csv'))
-        plot(df, args.envs, args.lr, args.arch, args.seed, args.save_path, not args.no_show)
+        plot(df, args.envs, args.lr, args.mlc, args.arch, args.seed, args.save_path,
+                not args.no_show)
