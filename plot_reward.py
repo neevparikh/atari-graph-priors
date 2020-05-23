@@ -102,7 +102,6 @@ def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
     else:
         hue = None
         style = None
-    __import__('pdb').set_trace()
     if seed_type == 'average':
         g = sns.relplot(x='frame',
                         y='average_reward',
