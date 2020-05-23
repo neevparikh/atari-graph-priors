@@ -1,10 +1,12 @@
+import argparse
+import glob
+import os
+import sys
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-import argparse
 import torch
-import glob
-import os
 sns.set(style="darkgrid")
 
 default_lr = 0.0001
@@ -21,15 +23,14 @@ def parse_filepath(fp):
         if arch == 'online' and tags[1].split('-')[0] == 'markovlosscoef':
             markov_metadata = {'markov_coef': tags[1].split('-')[1]}
         else:
-            markov_metadata = None
+            markov_metadata = {'markov_coef': 0.0}
         metadata = {
             "env": tags[0],
             "lr": lr,
             "arch": arch,
             "seed": tags[3].split('-')[1],
         }
-        if markov_metadata:
-            metadata.update(markov_metadata)
+        metadata.update(markov_metadata)
         return metadata
     else:
         print(f"Error in parsing filepath {fp}")
