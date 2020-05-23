@@ -86,17 +86,17 @@ def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
     col_wrap = 2 if len(envs) > 1 else 1
     # If multiple lr and arch, set hue and style accordingly
     if len(lr) > 1 and len(arch) > 1:
-        hue = 'lr'
-        style = 'arch'
+        hue = 'arch'
+        style = 'lr'
     elif len(lr) > 1 and len(arch) <= 1:
-        hue = 'lr'
-        style = None
+        hue = None
+        style = 'lr'
     elif len(mlc) > 1 and len(arch) > 1:
-        hue = 'markov_coef'
-        style = 'arch'
+        hue = 'arch'
+        style = 'markov_coef'
     elif len(mlc) > 1 and len(arch) <= 1:
-        hue = 'markov_coef'
-        style = None
+        hue = None
+        style = 'markov_coef'
     elif len(arch) > 1 and len(lr) <= 1:
         hue = 'arch'
         style = None
