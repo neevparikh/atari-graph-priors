@@ -108,7 +108,7 @@ args.model = 'results/QbertNoFrameskip-v4_learningrate-0.0001_arch-dataefficient
 args.memory_capacity = int(20e3)
 args.dqn_policy_epsilon = 0.05
 # args.memory = 'results/ccv-2020-05-20-1910/QbertNoFrameskip-v4_learning_rate_0.0001_seed_2/replay_memory.mem'
-args.memory = 'quick20K.mem'
+args.memory = 'rainbow400K_for_20K.mem'
 
 if torch.cuda.is_available() and not args.disable_cuda:
     args.device = torch.device('cuda')
@@ -142,6 +142,11 @@ class FeatureNet(nn.Module):
         )
         loss = markov_loss
         return loss
+
+    def save_phi(self, path, name):
+        full_path = os.path.join(path, name)
+        torch.save((self.phi, self.feature_size), full_path)
+        return full_path
 
     def train_one_batch(self, batch):
         loss = self.loss(batch)
@@ -177,7 +182,7 @@ def train():
         print('generating experiences')
         mem = ReplayMemory(args, args.memory_capacity, env.env.observation_space.shape)
         generate_experiences(args, dqn, env, mem)
-        save_memory(mem, 'quick20K.mem', disable_bzip=args.disable_bzip_memory)
+        save_memory(mem, args.memory, disable_bzip=args.disable_bzip_memory)
 
     print('sampling')
     batch = mem.sample(args.batch_size)
@@ -190,6 +195,12 @@ def train():
         if (step + 1) % args.evaluation_interval == 0:
             print(loss / args.evaluation_interval)
             loss = 0
+
+    model_filename = os.path.basename(args.model)
+    model_dirname = os.path.dirname(args.model)
+
+    phi_net_path = network.save_phi(model_dirname, 'pretrained_markov_phi_'+model_filename)
+    print('Saved phi network to {}'.format(phi_net_path))
 
 if __name__ == '__main__':
     train()
