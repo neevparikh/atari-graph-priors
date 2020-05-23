@@ -58,7 +58,7 @@ class ResetARIOneHot(gym.Wrapper):
         self.observation_space = gym.spaces.Box(
             0,
             255,  # max value
-            shape=(len(self.info_to_state(self.env.labels())),),
+            shape=self.info_to_state(self.env.labels()).shape,
             dtype=np.uint8)
 
     def reset(self, **kwargs):
