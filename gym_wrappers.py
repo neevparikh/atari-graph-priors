@@ -7,6 +7,7 @@ import torch
 
 
 class TorchWrapper(gym.Wrapper):
+
     def __init__(self, env, device):
         gym.Wrapper.__init__(self, env)
         self.device = device
@@ -17,11 +18,11 @@ class TorchWrapper(gym.Wrapper):
 
     def step(self, action):
         next_state, reward, done, info = self.env.step(action)
-        return torch.as_tensor(next_state.astype(np.float32)).to(
-            self.device), reward, done, info
+        return torch.as_tensor(next_state.astype(np.float32)).to(self.device), reward, done, info
 
 
 class ResetARI(gym.Wrapper):
+
     def __init__(self, env):
         gym.Wrapper.__init__(self, env)
 
@@ -30,7 +31,7 @@ class ResetARI(gym.Wrapper):
         self.observation_space = gym.spaces.Box(
             0,
             255,  # max value
-            shape=(len(self.env.labels()), ),
+            shape=(len(self.env.labels()),),
             dtype=np.uint8)
 
     def reset(self, **kwargs):
@@ -46,9 +47,50 @@ class ResetARI(gym.Wrapper):
         return next_state, reward, done, info
 
 
+# WARNING
+# Only works for env with 'player_x' and 'player_y' annotations
+class ResetARIOneHot(gym.Wrapper):
+    def __init__(self, env):
+        gym.Wrapper.__init__(self, env)
+
+        # change the observation space to accurately represent
+        # the shape of the labeled RAM observations
+        self.observation_space = gym.spaces.Box(
+            0,
+            255,  # max value
+            shape=self.info_to_state(self.env.labels()).shape,
+            dtype=np.uint8)
+
+    def reset(self, **kwargs):
+        self.env.reset(**kwargs)
+        # reset the env and get the current labeled RAM
+        return self.info_to_state(self.env.labels())
+
+    def step(self, action):
+        # we don't need the obs here, just the labels in info
+        _, reward, done, info = self.env.step(action)
+        next_state = self.info_to_state(info['labels'])
+        return next_state, reward, done, info
+
+    def info_to_state(self, labels):
+        # one hot x and y position
+        x_one_hot = np.eye(256)[labels['player_x']] * 255
+        y_one_hot = np.eye(256)[labels['player_y']] * 255
+        # grab the rest of the labeled RAM out of info and put as next_state
+        next_state = []
+        for l in labels.keys():
+            if l == 'player_x' or l == 'player_y':
+                continue
+            next_state.append(labels[l])
+
+        # join one hot positions to labeled RAM
+        return np.concatenate((x_one_hot,y_one_hot,np.array(next_state)))
+
+
 # Adapted from OpenAI Baselines:
 # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
 class AtariPreprocess(gym.Wrapper):
+
     def __init__(self, env, shape=(84, 84)):
         """ Preprocessing as described in the Nature DQN paper (Mnih 2015) """
         gym.Wrapper.__init__(self, env)
@@ -77,14 +119,16 @@ class AtariPreprocess(gym.Wrapper):
         next_state, reward, done, info = self.env.step(action)
         return self.transforms(next_state), reward, done, info
 
+
 class EpisodicLifeEnv(gym.Wrapper):
+
     def __init__(self, env):
         """Make end-of-life == end-of-episode, but only reset on true game over.
         Done by DeepMind for the DQN and co. since it helps value estimation.
         """
         gym.Wrapper.__init__(self, env)
         self.lives = 0
-        self.was_real_done  = True
+        self.was_real_done = True
 
     def step(self, action):
         obs, reward, done, info = self.env.step(action)
@@ -115,12 +159,12 @@ class EpisodicLifeEnv(gym.Wrapper):
 
 
 class MaxAndSkipEnv(gym.Wrapper):
+
     def __init__(self, env, skip=4):
         """Return only every `skip`-th frame"""
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
-        self._obs_buffer = np.zeros((2, ) + env.observation_space.shape,
-                                    dtype=np.uint8)
+        self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
         self._skip = skip
 
     def reset(self, **kwargs):
@@ -146,6 +190,7 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 
 class FrameStack(gym.Wrapper):
+
     def __init__(self, env, k):
         """Stack k last frames.
         Returns lazy array, which is much more memory efficient.
@@ -157,11 +202,10 @@ class FrameStack(gym.Wrapper):
         self.k = k
         self.frames = deque([], maxlen=k)
         shp = env.observation_space.shape
-        self.observation_space = gym.spaces.Box(
-            low=0,
-            high=255,
-            shape=((k, ) + shp),
-            dtype=env.observation_space.dtype)
+        self.observation_space = gym.spaces.Box(low=0,
+                                                high=255,
+                                                shape=((k,) + shp),
+                                                dtype=env.observation_space.dtype)
 
     def reset(self):
         ob = self.env.reset()
@@ -176,11 +220,12 @@ class FrameStack(gym.Wrapper):
 
     def _get_ob(self):
         assert len(self.frames) == self.k
-        return torch.as_tensor(np.stack(list(
-            self.frames), axis=0)).to(dtype=torch.float32).div_(255)
+        return torch.as_tensor(np.stack(list(self.frames),
+                                        axis=0)).to(dtype=torch.float32).div_(255)
 
 
 class LazyFrames(object):
+
     def __init__(self, frames):
         """This object ensures that common frames between the observations are
         only stored once.  It exists purely to optimize memory usage which can

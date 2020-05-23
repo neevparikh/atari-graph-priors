@@ -133,7 +133,9 @@ class ReplayMemory():
     # Returns a valid sample from a segment
     def _get_sample_from_segment(self, segment, i):
         valid = False
-        while not valid:
+        for _ in range(20):
+            if valid:
+                break
             # Uniformly sample an element from within a segment
             sample = np.random.uniform(i * segment, (i + 1) * segment)
             # Retrieve sample from tree with un-normalised probability
