@@ -65,7 +65,7 @@ def parse_args(custom_args=None):
 
     if args.jobname == defaultjob:
         args.jobname = "run{}".format(args.taskid)
-    elif not re.match(r'^(\w|\.)+$', args.jobname):
+    elif not re.match(r'^(\w|\.|-)+$', args.jobname):
         # We want to create a script file, so make sure the filename is legit
         print("Invalid job name: {}".format(args.jobname))
         sys.exit()

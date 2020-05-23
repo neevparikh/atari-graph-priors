@@ -10,7 +10,7 @@ from ccv_script import run as run_ccv
 # Tuning hyperparameters
 
 SEED_START = 0
-SEEDS_PER_RUN = 3
+SEEDS_PER_RUN = 2
 
 # Program args
 default_args = [
@@ -19,22 +19,23 @@ default_args = [
 #    "--env", "SeaquestNoFrameskip-v4",
 #    "--env", "BreakoutNoFrameskip-v4",
 #    "--env", "QbertNoFrameskip-v4",
-    "--env", "MsPacmanNoFrameskip-v4",
+#    "--env", "MsPacmanNoFrameskip-v4",
 # Select a mode
 #    "--architecture", "data-efficient",
-    "--architecture", "ari",
+#    "--architecture", "ari",
 #    "--architecture", "online",
 #    "--architecture", "ram",
+# Online only
+#    "--markov-loss-coef", "1",
 # Other args
+    "--learning-rate", "0.0001",
     "--enable-cudnn",
-    "--checkpoint-interval",
-    "100000",
-    "--memory",
-    "replay_memory.mem"
+    "--checkpoint-interval", "100000",
+    "--memory", "replay_memory.mem"
 ]
 
 # Values to tune
-tuning_values = {"--learning-rate": ["0.0001"]}
+tuning_values = {"--markov-loss-coef": ["0.01", "0.1", "1.0"]}
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
@@ -50,7 +51,7 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
         cluster_args = [
             "--cpus", "6",
             "--gpus", "1",
-            "--mem", "3",
+            "--mem", "13",
             "--env", ENV_PATH,
             "--duration", "medium",
         ]
@@ -70,13 +71,13 @@ python hyperparameter_tuning.py /path/to/env/ [ccv | csgrid | no_grid]"""
         for i, (arg, value_range) in enumerate(tuning_values.items()):
             for value in value_range:
                 run_args = default_args + [arg, value]
-                clean_arg_name = arg.strip('-').replace('-', '_')
-                run_tag = f"{clean_arg_name}_{value}"
+                clean_arg_name = arg.strip('-').replace('-', '').replace('_', '')
+                run_tag = f"{clean_arg_name}-{value}_arch-{default_args[3].replace('-', '')}"
                 run_args += ["--uuid", run_tag]
                 run_args += ["--seed", str(seed)]
                 cmd = "python main.py " + ' '.join(run_args)
-                jobname = f"{default_args[1].replace('-', '_')}_{run_tag.replace('-','_')}_seed_{str(seed)}"
-                jobname += '_ari' if default_args[3] == 'ari' else ''
+                jobname = f"{default_args[1]}_{run_tag}"
+                jobname += f"_seed-{str(seed)}"
                 if grid_type != "no_grid":
                     cmd = "unbuffer " + cmd
                     cluster_args += ["--command", cmd]
