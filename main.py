@@ -18,6 +18,7 @@ from test import test
 # yapf: disable
 parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
+parser.add_argument('--loss-log-filename', type=str)
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
 parser.add_argument('--env', type=str, required=True, help='ATARI game')
 parser.add_argument('--T-max', type=int, default=int(400e3), metavar='STEPS',

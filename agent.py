@@ -12,6 +12,7 @@ class Agent():
 
     def __init__(self, args, env):
         self.architecture = args.architecture
+        self.loss_log_filename = args.loss_log_filename
         self.markov_loss_coef = args.markov_loss_coef
         self.action_space = env.action_space.n
         self.atoms = args.atoms
@@ -61,9 +62,22 @@ class Agent():
         for param in self.target_net.parameters():
             param.requires_grad = False
 
-        self.optimiser = optim.Adam(
-            self.online_net.parameters(), lr=args.learning_rate, eps=args.adam_eps
-        )
+        rainbow_params = []
+        rainbow_params.extend(self.online_net.phi.parameters())
+        rainbow_params.extend(self.online_net.fc_h_v.parameters())
+        rainbow_params.extend(self.online_net.fc_h_a.parameters())
+        rainbow_params.extend(self.online_net.fc_z_v.parameters())
+        rainbow_params.extend(self.online_net.fc_z_a.parameters())
+        markov_params = self.online_net.markov_head.parameters()
+        if args.architecture == 'online':
+            params = rainbow_params + markov_params
+        elif args.architecture == 'data-efficient':
+            params = rainbow_params
+            self.loss_optimiser = optim.Adam(markov_params, lr=args.learning_rate, eps=args.adam_eps)
+        else:
+            raise NotImplementedError
+
+        self.optimiser = optim.Adam(params, lr=args.learning_rate, eps=args.adam_eps)
 
     # Resets noisy weights in all linear layers (of online net only)
     def reset_noise(self):
@@ -85,10 +99,8 @@ class Agent():
         idxs, states, actions, returns, next_states, nonterminals, weights = batch
 
         # Calculate current state probabilities (online network noise already sampled)
-        log_ps = self.online_net(
-            states, log=True)  # Log probabilities log p(s_t, ·; θonline)
-        log_ps_a = log_ps[range(self.batch_size),
-                          actions]  # log p(s_t, a_t; θonline)
+        log_ps = self.online_net(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
+        log_ps_a = log_ps[range(self.batch_size), actions]  # log p(s_t, a_t; θonline)
 
         with torch.no_grad():
             # Calculate nth next state probabilities
@@ -147,13 +159,21 @@ class Agent():
         weights = batch[-1]
 
         rainbow_loss = self.loss(batch)
-        loss = (weights * rainbow_loss).mean()
-        if self.architecture == 'online':
-            loss += self.markov_loss_coef * self.markov_loss(batch)
+        mean_rainbow_loss = (weights * rainbow_loss).mean()
+        markov_loss = self.markov_loss(batch)
+        loss = mean_rainbow_loss + self.markov_loss_coef * markov_loss
         self.online_net.zero_grad()
         # Backpropagate importance-weighted minibatch loss
         loss.backward()
         self.optimiser.step()
+
+        if self.architecture == 'dataefficient':
+            self.online_net.zero_grad()
+            markov_loss.backwards()
+            self.loss_optimiser.step()
+
+        with open(self.loss_log_filename, 'a+') as file:
+            file.write(f"{mean_rainbow_loss.detach().cpu().numpy()}, {markov_loss.detach().cpu().numpy()}\n")
 
         # Update priorities of sampled transitions
         mem.update_priorities(idxs, rainbow_loss.detach().cpu().numpy())

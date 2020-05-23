@@ -121,8 +121,7 @@ class DQN(nn.Module):
 
         self.phi, self.feature_size = build_phi_network(args,
             input_shape=self.state_space.shape)
-        if args.architecture == 'online':
-            self.markov_head = MarkovHead(args, self.feature_size, action_space)
+        self.markov_head = MarkovHead(args, self.feature_size, action_space)
         self.fc_h_v = NoisyLinear(self.feature_size,
                                   args.hidden_size,
                                   std_init=args.noisy_std)
