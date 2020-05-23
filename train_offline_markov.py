@@ -1,21 +1,22 @@
-# -*- coding: utf-8 -*-
-from __future__ import division
 import argparse
-from datetime import datetime
 import os
+import sys
+import random
+import pickle
 
-import atari_py
+import gym
 import numpy as np
 import torch
-from tqdm import trange
+from torch import nn
+from tqdm import tqdm
 
 from agent import Agent
-from env import get_train_test_envs, get_run_tag
+from env import get_train_test_envs
+from model import build_phi_network, MarkovHead
 from memory import ReplayMemory, load_memory, save_memory
-from test import test
 
-# Note that hyperparameters may originally be reported in ATARI game frames instead of agent steps
-# yapf: disable
+if __name__ == '__main__' and 'ipykernel' in sys.argv[0]:
+    sys.argv[1:] = ['--env', 'QbertNoFrameskip-v4']
 parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
@@ -27,7 +28,7 @@ parser.add_argument('--max-episode-length', type=int, default=int(108e3), metava
 parser.add_argument('--history-length', type=int, default=4, metavar='T',
                     help='Number of consecutive states processed')
 parser.add_argument('--architecture', type=str, default='data-efficient', metavar='ARCH',
-                    choices=['canonical', 'data-efficient', 'ari', 'ari-onehot', 'ram', 'pretrained', 'online'],
+                    choices=['canonical', 'data-efficient', 'ari', 'ram', 'pretrained', 'online'],
                     help='Network architecture')
 parser.add_argument('--hidden-size', type=int, default=256, metavar='SIZE',
                     help='Network hidden size')
@@ -94,9 +95,23 @@ parser.add_argument('--uuid', default='env', type=str, required=False,
                     PongNoFrameskip_64f9c4c9-bee5-44a6-9a61-d70267d9d623_ari_5 (uuid = random)
                     PongNoFrameskip_lr_1e-5_ari_5 (uuid = lr_1e-5 (custom))
                     """)
-# yapf: enable
+
 # Setup
 args = parser.parse_args()
+
+args.overfit_one_batch = False
+args.architecture = 'data-efficient'
+args.n_training_steps = 1000
+args.evaluation_interval = 10
+args.hidden_size = 256
+args.learning_rate = 0.003
+args.batch_size = 2048
+args.model = './model.pth'
+args.memory_capacity = int(20e3)
+args.dqn_policy_epsilon = 1
+args.disable_cuda = True
+# args.memory = 'results/ccv-2020-05-20-1910/QbertNoFrameskip-v4_learning_rate_0.0001_seed_2/replay_memory.mem'
+args.memory = '20k_list.mem'
 
 if torch.cuda.is_available() and not args.disable_cuda:
     args.device = torch.device('cuda')
@@ -104,113 +119,108 @@ if torch.cuda.is_available() and not args.disable_cuda:
     torch.backends.cudnn.enabled = args.enable_cudnn
 else:
     args.device = torch.device('cpu')
+random.seed(args.seed)
 
-np.random.seed(args.seed)
-torch.manual_seed(args.seed)
+class FeatureNet(nn.Module):
+    def __init__(self, args, action_space):
+        super(FeatureNet, self).__init__()
+        self.phi, self.feature_size = build_phi_network(args)
+        self.markov_head = MarkovHead(args, self.feature_size, action_space)
 
-# Environment
-env, test_env = get_train_test_envs(args)
-run_tag = get_run_tag(args)
-action_space = env.action_space.n
+        self.optimizer = torch.optim.Adam(
+            self.parameters(),
+            lr=args.learning_rate,
+            eps=args.adam_eps
+        )
 
-print(' ' * 26 + 'Options')
-for k, v in vars(args).items():
-    print(' ' * 26 + k + ': ' + str(v))
-results_dir = os.path.join('results', run_tag)
-if not os.path.exists(results_dir):
-    os.makedirs(results_dir)
-metrics = {'steps': [], 'rewards': [], 'Qs': [], 'best_avg_reward': -float('inf')}
+    def forward(self, x):
+        return self.phi(x)
 
+    def loss(self, batch):
+        # idxs, states, actions, returns, next_states, nonterminals, weights = batch
+        states, actions, next_states, returns, dones = tuple(zip(*batch))
+        states = torch.stack(states)
+        actions = torch.as_tensor(actions)
+        next_states = torch.stack(next_states)
+        markov_loss = self.markov_head.compute_markov_loss(
+            z0 = self.phi(states),
+            z1 = self.phi(next_states),
+            a = actions,
+        )
+        loss = markov_loss
+        return loss
 
-# Simple ISO 8601 timestamped logger
-def log(s):
-    print('[' + str(datetime.now().strftime('%Y-%m-%dT%H:%M:%S')) + '] ' + s)
+    def save_phi(self, path, name):
+        full_path = os.path.join(path, name)
+        torch.save((self.phi, self.feature_size), full_path)
+        return full_path
 
+    def train_one_batch(self, batch):
+        loss = self.loss(batch)
+        self.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        return loss.detach().cpu().numpy()
 
-# Agent
-dqn = Agent(args, env)
-
-# If a model is provided, and evaluate is fale, presumably we want to resume, so try to load memory
-if args.model is not None and not args.evaluate:
-    if not args.memory:
-        raise ValueError('Cannot resume training without memory save path. Aborting...')
-    elif not os.path.exists(args.memory):
-        raise ValueError(
-            'Could not find memory file at {path}. Aborting...'.format(path=args.memory))
-
-    mem = load_memory(args.memory, args.disable_bzip_memory)
-
-else:
-    # We need the previous (non-framestacked obs space)
-    mem = ReplayMemory(args, args.memory_capacity, env.env.observation_space.shape)
-
-priority_weight_increase = (1 - args.priority_weight) / (args.T_max - args.learn_start)
-
-# Construct validation memory
-# We need the previous (non-framestacked obs space)
-val_mem = ReplayMemory(args, args.evaluation_size, env.env.observation_space.shape)
-T, done = 0, True
-while T < args.evaluation_size:
-    if done:
-        state, done = env.reset(), False
-
-    next_state, _, done, _ = env.step(np.random.randint(0, action_space))
-    val_mem.append(state, None, None, done)
-    state = next_state
-    T += 1
-
-if args.evaluate:
-    dqn.eval()  # Set DQN (online network) to evaluation mode
-    avg_reward, avg_Q = test(
-        args, test_env, 0, dqn, val_mem, metrics, results_dir, evaluate=True
-    )  # Test
-    print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
-else:
-    # Training loop
-    dqn.train()
-    T, done = 0, True
-    for T in trange(1, args.T_max + 1):
+def generate_experiences(args, dqn, env, mem):
+    state, done = env.reset(), False
+    i = 0
+    pbar = tqdm(total = args.memory_capacity)
+    while i < args.memory_capacity: 
         if done:
             state, done = env.reset(), False
-
-        if T % args.replay_frequency == 0:
-            dqn.reset_noise()  # Draw a new set of noisy weights
-
-        action = dqn.act(state)  # Choose an action greedily (with noisy weights)
-        next_state, reward, done, _ = env.step(action)  # Step
-        if args.reward_clip > 0:
-            reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
-        mem.append(state, action, reward, done)  # Append transition to memory
-
-        # Train and test
-        if T >= args.learn_start:
-            mem.priority_weight = min(mem.priority_weight + priority_weight_increase,
-                                      1)  # Anneal importance sampling weight β to 1
-
-            if T % args.replay_frequency == 0:
-                dqn.learn(mem)  # Train with n-step distributional double-Q learning
-
-            if T % args.evaluation_interval == 0:
-                dqn.eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = test(
-                    args, test_env, T, dqn, val_mem, metrics, results_dir
-                )  # Test
-                log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' +
-                    str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
-                dqn.train()  # Set DQN (online network) back to training mode
-
-                # If memory path provided, save it
-                if args.memory is not None:
-                    save_memory(mem, f"{results_dir}/{args.memory}", args.disable_bzip_memory)
-
-            # Update target network
-            if T % args.target_update == 0:
-                dqn.update_target_net()
-
-            # Checkpoint the network
-            if (args.checkpoint_interval != 0) and (T % args.checkpoint_interval == 0):
-                dqn.save(results_dir, 'checkpoint.pth')
-
+        action = np.random.randint(0, env.action_space.n)
+        # if np.random.rand() < args.dqn_policy_epsilon:
+        #     action = np.random.randint(0, env.action_space.n)
+        # else:
+        #     action = dqn.act(state)
+        next_state, reward, done, _ = env.step(action)
+        if not done:
+            mem.append((state, action, next_state, reward, done))
+            i += 1
+            pbar.update(1)
         state = next_state
 
-env.close()
+def train():
+    print('making env')
+    env = get_train_test_envs(args)[0]
+    # dqn = Agent(args, env)
+    # dqn.eval()
+    network = FeatureNet(args, env.action_space.n)
+
+    if os.path.exists(args.memory):
+        print('loading experiences')
+        # mem = load_memory(args.memory, disable_bzip=args.disable_bzip_memory)
+        with open(args.memory, "rb") as memory_file:
+            mem = pickle.load(memory_file)
+    else:
+        print('generating experiences')
+        # mem = ReplayMemory(args, args.memory_capacity, env.env.observation_space.shape)
+        mem = []
+        generate_experiences(args, None, env, mem)
+        with open(args.memory, "wb") as memory_file:
+            pickle.dump(mem, memory_file)
+        # save_memory(mem, args.memory, disable_bzip=args.disable_bzip_memory)
+
+    print('sampling')
+    # batch = mem.sample(args.batch_size)
+    batch = random.sample(mem, args.batch_size)
+    loss = 0
+    print('training')
+    for step in tqdm(range(args.n_training_steps)):
+        if not args.overfit_one_batch and step > 0:
+            # batch = mem.sample(args.batch_size)
+            batch = random.sample(mem, args.batch_size)
+        loss += network.train_one_batch(batch)
+        if (step + 1) % args.evaluation_interval == 0:
+            tqdm.write(str(loss / args.evaluation_interval))
+            loss = 0
+
+    model_filename = os.path.basename(args.model)
+    model_dirname = os.path.dirname(args.model)
+
+    phi_net_path = network.save_phi(model_dirname, 'pretrained_markov_phi_'+model_filename)
+    print('Saved phi network to {}'.format(phi_net_path))
+
+if __name__ == '__main__':
+    train()

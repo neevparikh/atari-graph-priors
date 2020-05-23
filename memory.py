@@ -1,11 +1,29 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
+import bz2
 from collections import namedtuple
 import numpy as np
+import pickle
 import torch
 
 Transition = namedtuple('Transition', ('timestep', 'state', 'action', 'reward', 'nonterminal'))
 
+
+def load_memory(memory_path, disable_bzip):
+    if disable_bzip:
+        with open(memory_path, 'rb') as pickle_file:
+            return pickle.load(pickle_file)
+    else:
+        with bz2.open(memory_path, 'rb') as zipped_pickle_file:
+            return pickle.load(zipped_pickle_file)
+
+def save_memory(memory, memory_path, disable_bzip):
+    if disable_bzip:
+        with open(memory_path, 'wb') as pickle_file:
+            pickle.dump(memory, pickle_file)
+    else:
+        with bz2.open(memory_path, 'wb') as zipped_pickle_file:
+            pickle.dump(memory, zipped_pickle_file)
 
 # Segment tree data structure where parent node values are sum/max of children node values
 class SegmentTree():
@@ -118,12 +136,10 @@ class ReplayMemory():
         for _ in range(20):
             if valid:
                 break
-            sample = np.random.uniform(
-                i * segment, (i + 1) * segment
-            )  # Uniformly sample an element from within a segment
-            prob, idx, tree_idx = self.transitions.find(
-                sample
-            )  # Retrieve sample from tree with un-normalised probability
+            # Uniformly sample an element from within a segment
+            sample = np.random.uniform(i * segment, (i + 1) * segment)
+            # Retrieve sample from tree with un-normalised probability
+            prob, idx, tree_idx = self.transitions.find(sample)
             # Resample if transition straddled current index or probablity 0
             if ((self.transitions.index - idx) % self.capacity > self.n
                 and (idx - self.transitions.index) % self.capacity >= self.history
@@ -163,22 +179,23 @@ class ReplayMemory():
         return prob, idx, tree_idx, state, action, R, next_state, nonterminal
 
     def sample(self, batch_size):
-        p_total = self.transitions.total(
-        )  # Retrieve sum of all priorities (used to create a normalised probability distribution)
-        segment = p_total / batch_size  # Batch size number of segments, based on sum over all probabilities
-        batch = [
-            self._get_sample_from_segment(segment, i) for i in range(batch_size)
-        ]  # Get batch of valid samples
+        # Retrieve sum of all priorities (used to create a normalised probability distribution)
+        p_total = self.transitions.total()
+        # Batch size number of segments, based on sum over all probabilities
+        segment = p_total / batch_size
+        # Get batch of valid samples
+        batch = [self._get_sample_from_segment(segment, i) for i in range(batch_size)]
         probs, idxs, tree_idxs, states, actions, returns, next_states, nonterminals = zip(*batch)
         states, next_states, = torch.stack(states), torch.stack(next_states)
-        actions, returns, nonterminals = torch.cat(actions), torch.cat(returns
-                                                                      ), torch.stack(nonterminals)
-        probs = np.array(probs, dtype=np.float32) / p_total  # Calculate normalised probabilities
+        actions, returns = torch.cat(actions), torch.cat(returns)
+        nonterminals = torch.stack(nonterminals)
+        # Calculate normalised probabilities
+        probs = np.array(probs, dtype=np.float32) / p_total
         capacity = self.capacity if self.transitions.full else self.transitions.index
-        weights = (capacity * probs)**-self.priority_weight  # Compute importance-sampling weights w
-        weights = torch.tensor(
-            weights / weights.max(), dtype=torch.float32, device=self.device
-        )  # Normalise by max importance-sampling weight from batch
+        # Compute importance-sampling weights w
+        weights = (capacity * probs)**-self.priority_weight
+        # Normalise by max importance-sampling weight from batch
+        weights = torch.tensor( weights / weights.max(), dtype=torch.float32, device=self.device)
         return tree_idxs, states, actions, returns, next_states, nonterminals, weights
 
     def update_priorities(self, idxs, priorities):
