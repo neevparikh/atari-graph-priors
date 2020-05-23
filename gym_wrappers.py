@@ -74,9 +74,8 @@ class ResetARIOneHot(gym.Wrapper):
 
     def info_to_state(self, labels):
         # one hot x and y position
-        x_one_hot = np.eye(256)[labels['player_x']]
-        y_one_hot = np.eye(256)[labels['player_y']]
-
+        x_one_hot = np.eye(256)[labels['player_x']] * 255
+        y_one_hot = np.eye(256)[labels['player_y']] * 255
         # grab the rest of the labeled RAM out of info and put as next_state
         next_state = []
         for l in labels.keys():
