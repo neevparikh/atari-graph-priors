@@ -70,7 +70,7 @@ class Agent():
         rainbow_params.extend(self.online_net.fc_z_a.parameters())
         markov_params = self.online_net.markov_head.parameters()
         if args.architecture == 'online':
-            params = rainbow_params + markov_params
+            params = rainbow_params + list(markov_params)
         elif args.architecture == 'data-efficient':
             params = rainbow_params
             self.loss_optimiser = optim.Adam(markov_params, lr=args.learning_rate, eps=args.adam_eps)
