@@ -116,7 +116,7 @@ action_space = env.action_space.n
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
     print(' ' * 26 + k + ': ' + str(v))
-results_dir = os.path.join('results', run_tag)
+results_dir = os.path.join('results/learning', run_tag)
 if not os.path.exists(results_dir):
     os.makedirs(results_dir)
 metrics = {'steps': [], 'rewards': [], 'Qs': [], 'best_avg_reward': -float('inf')}
