@@ -60,7 +60,7 @@ def collate_results(results_dir):
     return pd.DataFrame(df)
 
 
-def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
+def plot(data, envs, lr, mlc, arch, seed, savepath=None, show=True):
     # Filter based on input
     if envs:
         data = data[data['env'].isin(envs)]
@@ -78,8 +78,14 @@ def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
         data = data[data['markov_coef'].isin(mlc)]
     else:
         mlc = list(data['markov_coef'].unique())
+    if seed and isinstance(seed, list):
+        if len(seed) == 1 and seed[0] in ['average', 'all']:
+            seed = seed[0]
+        else:
+            data = data[data['seed'].isin(seed)]
 
-    print(f"Plotting using {envs}, {lr}, {arch}, {seed_type}")
+
+    print(f"Plotting using {envs}, {lr}, {arch}, {seed}")
 
     # If asking for multiple envs, use facetgrid and adjust height
     height = 3 if len(envs) > 2 else 5
@@ -103,7 +109,7 @@ def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
     else:
         hue = None
         style = None
-    if seed_type == 'average':
+    if isinstance(seed, list) or seed == 'average':
         g = sns.relplot(x='frame',
                         y='average_reward',
                         data=data,
@@ -117,7 +123,7 @@ def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
                         col_wrap=col_wrap,
                         facet_kws={'sharey': False})
 
-    elif seed_type == 'all':
+    elif seed == 'all':
         g = sns.relplot(x='frame',
                         y='average_reward',
                         data=data,
@@ -133,7 +139,7 @@ def plot(data, envs, lr, mlc, arch, seed_type, savepath=None, show=True):
                         col_wrap=col_wrap,
                         facet_kws={'sharey': False})
     else:
-        raise ValueError(f"{seed_type} not a recognized choice")
+        raise ValueError(f"{seed} not a recognized choice")
 
     if savepath is not None:
         g.savefig(savepath)
@@ -157,7 +163,7 @@ def parse_args():
     parser.add_argument('--mlc', help='Markov loss coef to plot, empty means all', type=str,
             nargs='*')
     parser.add_argument('--arch', help='Arch to plot, empty means all', type=str, nargs='*')
-    parser.add_argument('--seed', help='How to handle seeds', type=str, choices=['average', 'all'],
+    parser.add_argument('--seed', help='How to handle seeds', type=str, nargs='*',
             default='average')
     parser.add_argument('--save-path', help='Save the plot here', type=str)
     parser.add_argument('--no-plot', help='No plots', action='store_true')
