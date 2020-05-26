@@ -191,8 +191,10 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 class FrameStack(gym.Wrapper):
 
-    def __init__(self, env, k):
+    def __init__(self, env, k, cast=torch.float32, scale=True):
         """Stack k last frames.
+        cast : torch dtype to cast to. If None, no cast
+        scale : bool. If True, divides by 255 (scaling to float). cast must be torch.float
         Returns lazy array, which is much more memory efficient.
         See Also
         --------
@@ -200,6 +202,10 @@ class FrameStack(gym.Wrapper):
         """
         gym.Wrapper.__init__(self, env)
         self.k = k
+        self.cast = cast
+        self.scale = scale
+        if self.scale:
+            assert cast == torch.float32 or cast == torch.float64, f"Cast must be torch.float, found {self.cast}"
         self.frames = deque([], maxlen=k)
         shp = env.observation_space.shape
         self.observation_space = gym.spaces.Box(low=0,
@@ -217,11 +223,15 @@ class FrameStack(gym.Wrapper):
         ob, reward, done, info = self.env.step(action)
         self.frames.append(ob)
         return self._get_ob(), reward, done, info
-
+    
     def _get_ob(self):
         assert len(self.frames) == self.k
-        return torch.as_tensor(np.stack(list(self.frames),
-                                        axis=0)).to(dtype=torch.float32).div_(255)
+        ob = torch.as_tensor(np.stack(list(self.frames), axis=0))
+        if self.cast is not None:
+            ob = ob.to(dtype=self.cast)
+        if self.scale: 
+            ob = ob.div_(255)
+        return ob
 
 
 class LazyFrames(object):

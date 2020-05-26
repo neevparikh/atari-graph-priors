@@ -14,13 +14,11 @@ from tqdm import tqdm
 
 from env import get_train_test_envs, get_run_tag
 from model import build_phi_network, MarkovHead
+from gym_wrappers import FrameStack, MaxAndSkipEnv, AtariPreprocess
 
 Replay = namedtuple("Replay", ["state", "action", "next_state", "reward", "done"])
 
-if __name__ == '__main__' and 'ipykernel' in sys.argv[0]:
-    sys.argv[1:] = ['--env', 'QbertNoFrameskip-v4']
-
-parser = argparse.ArgumentParser(description='Rainbow')
+parser = argparse.ArgumentParser(description='Pretrain Markov Abstraction')
 # yapf: disable
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
@@ -87,8 +85,8 @@ class FeatureNet(nn.Module):
     def loss(self, batch):
         states, actions, next_states, returns, dones = batch
         markov_loss = self.markov_head.compute_markov_loss(
-            z0=self.phi(states),
-            z1=self.phi(next_states),
+            z0=self.phi(states.to(torch.float32)),
+            z1=self.phi(next_states.to(torch.float32)),
             a=actions,
         )
         loss = markov_loss
@@ -108,8 +106,8 @@ class FeatureNet(nn.Module):
 
 
 def generate_experiences(args, env):
-    state = torch.zeros((args.memory_capacity,) + env.observation_space.shape)
-    next_state = torch.zeros((args.memory_capacity,) + env.observation_space.shape)
+    state = torch.zeros((args.memory_capacity,) + env.observation_space.shape, dtype=torch.uint8)
+    next_state = torch.zeros((args.memory_capacity,) + env.observation_space.shape, dtype=torch.uint8)
     action = torch.zeros((args.memory_capacity,), dtype=torch.long)
     reward = torch.zeros((args.memory_capacity,))
     done = torch.zeros((args.memory_capacity,))
@@ -151,7 +149,8 @@ def train():
         json.dump(param_dict, fp)
 
     print('making env')
-    env = get_train_test_envs(args)[0]
+    env = gym.make(args.env)
+    env = FrameStack(MaxAndSkipEnv(AtariPreprocess(env), 4), args.history_length, cast=torch.uint8, scale=False)
     network = FeatureNet(args, env.action_space.n)
 
     experiences_filepath = f"{results_dir}/experiences.mem"
