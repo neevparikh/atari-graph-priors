@@ -41,15 +41,7 @@ parser.add_argument('--batch-size', type=int, default=2048, metavar='SIZE', help
 parser.add_argument('--enable-cudnn', action='store_true',
                     help='Enable cuDNN (faster but nondeterministic)')
 parser.add_argument('--uuid', default='env', type=str, required=False,
-                    help="""UUID for the experient run.
-                    `env` uses environment name,
-                    `random` uses a random UUID
-                        (i.e. 2b25d648-ce34-4523-b409-35247d481e32),
-                    anything else is custom, example:
-                    PongNoFrameskip_ari_5 (uuid = env)
-                    PongNoFrameskip_64f9c4c9-bee5-44a6-9a61-d70267d9d623_ari_5 (uuid = random)
-                    PongNoFrameskip_lr_1e-5_ari_5 (uuid = lr_1e-5 (custom))
-                    """)
+                    help='UUID for the experient run.')
 # yapf: enable
 
 # Setup
@@ -138,7 +130,7 @@ def sample(mem, args):
 
 
 def train():
-    run_tag = get_run_tag(args)
+    run_tag = args.uuid
     results_dir = os.path.join('results/pretraining', run_tag)
     os.makedirs(results_dir, exist_ok=True)
     with open(f"{results_dir}/params.json", 'w') as fp:
