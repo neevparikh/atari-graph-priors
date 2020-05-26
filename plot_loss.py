@@ -129,14 +129,18 @@ if __name__ == "__main__":
         print("Recreating csv in results directory")
         print(f"Binning by {args.bin_size}")
         df = collate_results(args.results_dir, args.bin_size)
+        df['bin_size'] = args.bin_size
         df.to_csv(os.path.join(args.results_dir, 'combined.csv'))
 
     if not args.no_plot:
         if args.save_path:
             os.makedirs(os.path.split(args.save_path)[0], exist_ok=True)
         df = pd.read_csv(os.path.join(args.results_dir, 'combined.csv'))
-
+        bin_size = df['bin_size'].unique()
+        assert len(bin_size) > 0, "Must include bin size when creating directory."
+        bin_size = bin_size[0]
+        del df['bin_size']
         if args.query is not None:
             print(f"Filtering with {args.query}")
             df = df.query(args.query)
-        plot(df, args.hue, args.style, args.seed, args.bin_size, savepath=args.save_path, show=(not args.no_show))
+        plot(df, args.hue, args.style, args.seed, bin_size, savepath=args.save_path, show=(not args.no_show))
