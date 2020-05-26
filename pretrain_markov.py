@@ -4,6 +4,7 @@ import os
 import sys
 import random
 import pickle
+from collections import namedtuple
 
 import gym
 import numpy as np
@@ -13,6 +14,8 @@ from tqdm import tqdm
 
 from env import get_train_test_envs, get_run_tag
 from model import build_phi_network, MarkovHead
+
+Replay = namedtuple("Replay", ["state", "action", "next_state", "reward", "done"])
 
 if __name__ == '__main__' and 'ipykernel' in sys.argv[0]:
     sys.argv[1:] = ['--env', 'QbertNoFrameskip-v4']
@@ -79,10 +82,7 @@ class FeatureNet(nn.Module):
         return self.phi(x)
 
     def loss(self, batch):
-        states, actions, next_states, rewards, dones = tuple(zip(*batch))
-        states = torch.stack(states)
-        actions = torch.as_tensor(actions)
-        next_states = torch.stack(next_states)
+        states, actions, next_states, returns, dones = batch
         markov_loss = self.markov_head.compute_markov_loss(
             z0 = self.phi(states),
             z1 = self.phi(next_states),
@@ -103,7 +103,14 @@ class FeatureNet(nn.Module):
         self.optimizer.step()
         return loss.detach().cpu().numpy()
 
-def generate_experiences(args, env, mem):
+def generate_experiences(args, env):
+    state = torch.zeros((args.memory_capacity,) + env.observation_space.shape)
+    next_state = torch.zeros((args.memory_capacity,) + env.observation_space.shape)
+    action = torch.zeros((args.memory_capacity,), dtype=torch.long)
+    reward = torch.zeros((args.memory_capacity,))
+    done = torch.zeros((args.memory_capacity,))
+    mem = Replay(state, action, next_state, reward, done)
+
     state, done = env.reset(), False
     i = 0
     pbar = tqdm(total = args.memory_capacity)
@@ -113,10 +120,19 @@ def generate_experiences(args, env, mem):
         action = np.random.randint(0, env.action_space.n)
         next_state, reward, done, _ = env.step(action)
         if not done:
-            mem.append((state, action, next_state, reward, done))
+            mem.state[i] = state
+            mem.next_state[i] = next_state
+            mem.action[i] = action
+            mem.done[i] = done
+            mem.reward[i] = reward
             i += 1
             pbar.update(1)
         state = next_state
+    return mem 
+
+def sample(mem, args):
+    batch_idx = random.sample(range(args.memory_capacity), args.batch_size)
+    return mem.state[batch_idx], mem.action[batch_idx], mem.next_state[batch_idx], mem.reward[batch_idx], mem.done[batch_idx]
 
 def train():
     run_tag = get_run_tag(args)
@@ -138,8 +154,7 @@ def train():
             mem = pickle.load(fp)
     else:
         print('generating experiences')
-        mem = []
-        generate_experiences(args, env, mem)
+        mem = generate_experiences(args, env)
         with open(experiences_filepath, 'wb') as fp:
             pickle.dump(mem, fp)
 
@@ -147,10 +162,10 @@ def train():
     with open(f"{results_dir}/loss.csv", 'w') as fp:
         fp.write('step,loss\n') # write headers
 
-        batch = random.sample(mem, args.batch_size)
+        batch = sample(mem, args)
         for step in tqdm(range(args.n_training_steps)):
             if not args.overfit_one_batch and step > 0:
-                batch = random.sample(mem, args.batch_size)
+                batch = sample(mem, args)
             loss = network.train_one_batch(batch)
             fp.write(f"{step},{loss}\n")
 
