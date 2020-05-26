@@ -99,7 +99,7 @@ def run(custom_args=None):
     """Build the bash script and send it to the cluster"""
     if custom_args:
         args = parse_args(custom_args)
-    else: 
+    else:
         args = parse_args()
 
     # Define the bash script that sbatch should run (with values
@@ -134,7 +134,7 @@ source {}
     duration_map = {
         'test': '0:10:00',  # 10 minutes
         'short': '1:00:00',  # 1 hour
-        'medium': '12:00:00', # 12 hours
+        'medium': '15:00:00', # 15 hours
         'long': '1-00:00:00',  # 1 day
         'slong': '2-00:00:00',  # 2 days
         'vlong': '7-00:00:00',  # 1 week
