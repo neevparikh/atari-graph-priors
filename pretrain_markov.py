@@ -164,6 +164,7 @@ def train():
                 batch = sample(mem, args)
             loss = network.train_one_batch(batch)
             fp.write(f"{step},{loss}\n")
+            fp.flush()
 
     phi_net_path = network.save_phi(results_dir, 'phi_model.pth')
     print('Saved phi network to {}'.format(phi_net_path))
