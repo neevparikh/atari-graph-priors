@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser(description='Generate commands based on lists o
 parser.add_argument('--meta-command', type=str, required=True)
 parser.add_argument('--meta-tag-name', type=str)
 parser.add_argument('--meta-tag-args', type=str, nargs='*')
+parser.add_argument('--meta-tag-id', type=str)
 args, child_args = parser.parse_known_args()
 
 base_cmd = args.meta_command
@@ -40,11 +41,11 @@ del variables[None]
 cmd_prefix_list = [base_cmd]
 
 if args.meta_tag_name is not None:
-    cmd_suffix_list = ['--'+args.meta_tag_name]
+    cmd_suffix_list = ['']
     if args.meta_tag_args is None:
         args.meta_tag_args = list(variables.keys())
 
-sep = ' '
+sep = ''
 for key, value_list in variables.items():
     cmd_prefix_list = [prefix+' --'+key+' {}' for prefix in cmd_prefix_list]
     cmd_prefix_list = [prefix.format(v) for v in value_list for prefix in cmd_prefix_list]
@@ -58,8 +59,11 @@ for key, value_list in variables.items():
             cmd_suffix_list = [suffix for v in value_list for suffix in cmd_suffix_list]
         sep = '_'
 
+if args.meta_tag_id is not None:
+    cmd_suffix_list = [args.meta_tag_id + '-{}_'.format(i) + suffix for (i, suffix) in enumerate(cmd_suffix_list)]
+
 if args.meta_tag_name is not None:
-    cmd_prefix_list = [' '.join([prefix, suffix]) for (prefix, suffix) in zip(cmd_prefix_list, cmd_suffix_list)]
+    cmd_prefix_list = [' '.join([prefix, '--'+args.meta_tag_name, suffix]) for (prefix, suffix) in zip(cmd_prefix_list, cmd_suffix_list)]
 
 for cmd in cmd_prefix_list:
     print(cmd)
