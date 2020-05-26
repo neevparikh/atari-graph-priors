@@ -51,7 +51,8 @@ for key, value_list in variables.items():
     if args.meta_tag_name is not None:
         if key in args.meta_tag_args:
             value_slot = '-{}' if len(value_list) > 1 or value_list[0]!='' else '{}'
-            cmd_suffix_list = [suffix+sep+key+value_slot for suffix in cmd_suffix_list]
+            keyname = key.replace('-','').replace('_','')
+            cmd_suffix_list = [suffix+sep+keyname+value_slot for suffix in cmd_suffix_list]
             cmd_suffix_list = [suffix.format(v) for v in value_list for suffix in cmd_suffix_list]
         else:
             cmd_suffix_list = [suffix for v in value_list for suffix in cmd_suffix_list]
