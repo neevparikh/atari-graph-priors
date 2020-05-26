@@ -4,7 +4,6 @@ import os
 import sys
 import random
 import pickle
-from collections import namedtuple
 
 import gym
 import numpy as np
@@ -15,13 +14,9 @@ from tqdm import tqdm
 from env import get_train_test_envs, get_run_tag
 from model import build_phi_network, MarkovHead
 
-Replay = namedtuple("Replay", ["state", "action", "next_state", "reward", "done"])
-
 if __name__ == '__main__' and 'ipykernel' in sys.argv[0]:
     sys.argv[1:] = ['--env', 'QbertNoFrameskip-v4']
-
 parser = argparse.ArgumentParser(description='Rainbow')
-# yapf: disable
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
 parser.add_argument('--env', type=str, required=True, help='ATARI game')
@@ -42,8 +37,6 @@ parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε',
 parser.add_argument('--batch-size', type=int, default=2048, metavar='SIZE', help='Batch size')
 parser.add_argument('--enable-cudnn', action='store_true',
                     help='Enable cuDNN (faster but nondeterministic)')
-parser.add_argument('--phi-net-path', type=str,
-                    help='Path to save/load the phi network from')
 parser.add_argument('--uuid', default='env', type=str, required=False,
                     help="""UUID for the experient run.
                     `env` uses environment name,
@@ -54,7 +47,6 @@ parser.add_argument('--uuid', default='env', type=str, required=False,
                     PongNoFrameskip_64f9c4c9-bee5-44a6-9a61-d70267d9d623_ari_5 (uuid = random)
                     PongNoFrameskip_lr_1e-5_ari_5 (uuid = lr_1e-5 (custom))
                     """)
-# yapf: enable
 
 # Setup
 args = parser.parse_args()
@@ -69,27 +61,30 @@ else:
     args.device = torch.device('cpu')
 random.seed(args.seed)
 
-
 class FeatureNet(nn.Module):
-
     def __init__(self, args, action_space):
         super(FeatureNet, self).__init__()
         self.phi, self.feature_size = build_phi_network(args)
         self.markov_head = MarkovHead(args, self.feature_size, action_space)
 
-        self.optimizer = torch.optim.Adam(self.parameters(),
-                                          lr=args.learning_rate,
-                                          eps=args.adam_eps)
+        self.optimizer = torch.optim.Adam(
+            self.parameters(),
+            lr=args.learning_rate,
+            eps=args.adam_eps
+        )
 
     def forward(self, x):
         return self.phi(x)
 
     def loss(self, batch):
-        states, actions, next_states, returns, dones = batch
+        states, actions, next_states, rewards, dones = tuple(zip(*batch))
+        states = torch.stack(states)
+        actions = torch.as_tensor(actions)
+        next_states = torch.stack(next_states)
         markov_loss = self.markov_head.compute_markov_loss(
-            z0=self.phi(states),
-            z1=self.phi(next_states),
-            a=actions,
+            z0 = self.phi(states),
+            z1 = self.phi(next_states),
+            a = actions,
         )
         loss = markov_loss
         return loss
@@ -106,40 +101,20 @@ class FeatureNet(nn.Module):
         self.optimizer.step()
         return loss.detach().cpu().numpy()
 
-
-def generate_experiences(args, env):
-    state = torch.zeros((args.memory_capacity,) + env.observation_space.shape)
-    next_state = torch.zeros((args.memory_capacity,) + env.observation_space.shape)
-    action = torch.zeros((args.memory_capacity,), dtype=torch.long)
-    reward = torch.zeros((args.memory_capacity,))
-    done = torch.zeros((args.memory_capacity,))
-    mem = Replay(state, action, next_state, reward, done)
-
+def generate_experiences(args, env, mem):
     state, done = env.reset(), False
     i = 0
-    pbar = tqdm(total=args.memory_capacity)
+    pbar = tqdm(total = args.memory_capacity)
     while i < args.memory_capacity:
         if done:
             state, done = env.reset(), False
         action = np.random.randint(0, env.action_space.n)
         next_state, reward, done, _ = env.step(action)
         if not done:
-            mem.state[i] = state
-            mem.next_state[i] = next_state
-            mem.action[i] = action
-            mem.done[i] = done
-            mem.reward[i] = reward
+            mem.append((state, action, next_state, reward, done))
             i += 1
             pbar.update(1)
         state = next_state
-    return mem
-
-
-def sample(mem, args):
-    batch_idx = random.sample(range(args.memory_capacity), args.batch_size)
-    return mem.state[batch_idx], mem.action[batch_idx], mem.next_state[batch_idx], \
-            mem.reward[batch_idx], mem.done[batch_idx]
-
 
 def train():
     run_tag = get_run_tag(args)
@@ -161,24 +136,24 @@ def train():
             mem = pickle.load(fp)
     else:
         print('generating experiences')
-        mem = generate_experiences(args, env)
+        mem = []
+        generate_experiences(args, env, mem)
         with open(experiences_filepath, 'wb') as fp:
             pickle.dump(mem, fp)
 
     print('training')
     with open(f"{results_dir}/loss.csv", 'w') as fp:
-        fp.write('step,loss\n')  # write headers
+        fp.write('step,loss\n') # write headers
 
-        batch = sample(mem, args)
+        batch = random.sample(mem, args.batch_size)
         for step in tqdm(range(args.n_training_steps)):
             if not args.overfit_one_batch and step > 0:
-                batch = sample(mem, args)
+                batch = random.sample(mem, args.batch_size)
             loss = network.train_one_batch(batch)
             fp.write(f"{step},{loss}\n")
 
     phi_net_path = network.save_phi(results_dir, 'phi_model.pth')
     print('Saved phi network to {}'.format(phi_net_path))
-
 
 if __name__ == '__main__':
     train()
