@@ -43,14 +43,14 @@ def collate_results(results_dir, bin_size):
     return pd.concat(dfs, axis=0)
 
 
-def plot(data, hue, style, seed, bin_size, savepath=None, show=True):
+def plot(data, hue, style, seed, savepath=None, show=True):
     print(f"Plotting using hue={hue}, style={style}, {seed}")
 
     # If asking for multiple envs, use facetgrid and adjust height
     height = 3 if len(data['env'].unique()) > 2 else 5
     col_wrap = 2 if len(data['env'].unique()) > 1 else 1
 
-    palette = "Paired"
+    palette = sns.color_palette(n_colors=len(data[hue].unique()))
 
     if isinstance(seed, list) or seed == 'average':
         g = sns.relplot(x='step',
@@ -87,7 +87,7 @@ def plot(data, hue, style, seed, bin_size, savepath=None, show=True):
         raise ValueError(f"{seed} not a recognized choice")
 
     for ax in g.axes.flatten():
-        ax.set_xlabel(f"step in {str(bin_size)}s")
+        ax.set_xlabel(f"steps")
         ax.set(ylim=(0, 3)) # TODO make this something like 80% of the points are visible
 
     if savepath is not None:
@@ -110,7 +110,7 @@ def parse_args():
     parser.add_argument('--bin-size', help='How much to reduce the data by', type=int, default=100)
 
     parser.add_argument('--query', help='DF query string', type=str)
-    parser.add_argument('--hue', help='Hue variable', type=str, )
+    parser.add_argument('--hue', help='Hue variable', type=str)
     parser.add_argument('--style', help='Style variable', type=str)
     parser.add_argument('--seed', help='How to handle seeds', type=str, default='average')
 
@@ -143,4 +143,4 @@ if __name__ == "__main__":
         if args.query is not None:
             print(f"Filtering with {args.query}")
             df = df.query(args.query)
-        plot(df, args.hue, args.style, args.seed, bin_size, savepath=args.save_path, show=(not args.no_show))
+        plot(df, args.hue, args.style, args.seed, savepath=args.save_path, show=(not args.no_show))
