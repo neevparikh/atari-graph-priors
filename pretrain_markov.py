@@ -154,15 +154,15 @@ def train():
     network = FeatureNet(args, env.action_space.n)
 
     experiences_filepath = f"{results_dir}/experiences.mem"
-    if os.path.exists(experiences_filepath):
-        print('loading experiences')
-        with open(experiences_filepath, 'rb') as fp:
-            mem = pickle.load(fp)
-    else:
-        print('generating experiences')
-        mem = generate_experiences(args, env)
-        with open(experiences_filepath, 'wb') as fp:
-            pickle.dump(mem, fp)
+    # if os.path.exists(experiences_filepath):
+    #     print('loading experiences')
+    #     # with open(experiences_filepath, 'rb') as fp:
+    #     #     mem = pickle.load(fp)
+    # else:
+    print('generating experiences')
+    mem = generate_experiences(args, env)
+        # with open(experiences_filepath, 'wb') as fp:
+        #     pickle.dump(mem, fp)
 
     print('training')
     with open(f"{results_dir}/loss.csv", 'w') as fp:
