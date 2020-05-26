@@ -107,7 +107,7 @@ def parse_args():
             required=False, type=str)
     parser.add_argument('--create-csv', help='Create csv, overwrites if exists',
             action='store_true')
-    parser.add_argument('--bin-size', help='How much to reduce the data by', type=int, default=100)
+    parser.add_argument('--bin-size', help='How much to reduce the data by', type=int, default=1000)
 
     parser.add_argument('--query', help='DF query string', type=str)
     parser.add_argument('--hue', help='Hue variable', type=str)
