@@ -1,12 +1,6 @@
 import argparse
 from collections import OrderedDict
-from functools import partial
 import sys
-
-# python meta_launcher.py --batch-size 2048 --seed 1 2 3 --lr 0.01 0.003 --enable_cuda --steps 1000 15000 --render --command "python3 main.py"
-# sys.argv = ['meta_launcher.py', 'foo', '--batch-size', '2048', '--seed', '1', '2', '3', '--lr', '0.01', '0.003', '--enable_cuda', '--steps', '1000', '15000', '--render', '--command', 'python3 main.py']
-
-args = sys.argv[1:]
 
 def usage_msg():
     return '''meta_launcher.py
@@ -14,17 +8,21 @@ def usage_msg():
         --argA val1
         --argB
         --argC val1 val2 val3
-        --command [command]'''
+        --meta-command command
+        [--meta-tag-name tagname]
+        [--meta-tag-args [argA argC]]'''
 
 parser = argparse.ArgumentParser(description='Generate commands based on lists of arguments', usage=usage_msg())
-parser.add_argument('--command', type=str, required=True)
-command_arg, other_args = parser.parse_known_args(args)
+parser.add_argument('--meta-command', type=str, required=True)
+parser.add_argument('--meta-tag-name', type=str)
+parser.add_argument('--meta-tag-args', type=str, nargs='*')
+args, child_args = parser.parse_known_args()
 
-base_cmd = command_arg.command
+base_cmd = args.meta_command
 
 variables = OrderedDict({None: []})
 current_var = None
-for arg in other_args:
+for arg in child_args:
     if '--' == arg[:2]:
         # variable
         if current_var is not None and not variables[current_var]:
@@ -39,10 +37,29 @@ if variables[None]:
     base_cmd = base_cmd + ' ' + ' '.join(variables[None])
 del variables[None]
 
-cmd_list = [base_cmd]
-for key, value_list in variables.items():
-    cmd_list = [cmd+' --'+key+' {}' for cmd in cmd_list]
-    cmd_list = [cmd.format(v) for v in value_list for cmd in cmd_list]
+cmd_prefix_list = [base_cmd]
 
-for cmd in cmd_list:
+if args.meta_tag_name is not None:
+    cmd_suffix_list = ['--'+args.meta_tag_name]
+    if args.meta_tag_args is None:
+        args.meta_tag_args = list(variables.keys())
+
+sep = ' '
+for key, value_list in variables.items():
+    cmd_prefix_list = [prefix+' --'+key+' {}' for prefix in cmd_prefix_list]
+    cmd_prefix_list = [prefix.format(v) for v in value_list for prefix in cmd_prefix_list]
+    if args.meta_tag_name is not None:
+        if key in args.meta_tag_args:
+            value_slot = '-{}' if len(value_list) > 1 or value_list[0]!='' else '{}'
+            keyname = key.replace('-','').replace('_','')
+            cmd_suffix_list = [suffix+sep+keyname+value_slot for suffix in cmd_suffix_list]
+            cmd_suffix_list = [suffix.format(v) for v in value_list for suffix in cmd_suffix_list]
+        else:
+            cmd_suffix_list = [suffix for v in value_list for suffix in cmd_suffix_list]
+        sep = '_'
+
+if args.meta_tag_name is not None:
+    cmd_prefix_list = [' '.join([prefix, suffix]) for (prefix, suffix) in zip(cmd_prefix_list, cmd_suffix_list)]
+
+for cmd in cmd_prefix_list:
     print(cmd)

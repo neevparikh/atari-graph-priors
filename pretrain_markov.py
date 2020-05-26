@@ -40,8 +40,6 @@ parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε',
 parser.add_argument('--batch-size', type=int, default=2048, metavar='SIZE', help='Batch size')
 parser.add_argument('--enable-cudnn', action='store_true',
                     help='Enable cuDNN (faster but nondeterministic)')
-parser.add_argument('--phi-net-path', type=str,
-                    help='Path to save/load the phi network from')
 parser.add_argument('--uuid', default='env', type=str, required=False,
                     help="""UUID for the experient run.
                     `env` uses environment name,
@@ -67,27 +65,27 @@ else:
     args.device = torch.device('cpu')
 random.seed(args.seed)
 
-
 class FeatureNet(nn.Module):
-
     def __init__(self, args, action_space):
         super(FeatureNet, self).__init__()
         self.phi, self.feature_size = build_phi_network(args)
         self.markov_head = MarkovHead(args, self.feature_size, action_space)
 
-        self.optimizer = torch.optim.Adam(self.parameters(),
-                                          lr=args.learning_rate,
-                                          eps=args.adam_eps)
+        self.optimizer = torch.optim.Adam(
+            self.parameters(),
+            lr=args.learning_rate,
+            eps=args.adam_eps
+        )
 
     def forward(self, x):
         return self.phi(x)
 
     def loss(self, batch):
-        states, actions, next_states, returns, dones = batch
+        states, actions, next_states, rewards, dones = batch
         markov_loss = self.markov_head.compute_markov_loss(
-            z0=self.phi(states.to(torch.float32)),
-            z1=self.phi(next_states.to(torch.float32)),
-            a=actions,
+            z0 = self.phi(states.to(torch.float32)),
+            z1 = self.phi(next_states.to(torch.float32)),
+            a = actions,
         )
         loss = markov_loss
         return loss
@@ -115,7 +113,7 @@ def generate_experiences(args, env):
 
     state, done = env.reset(), False
     i = 0
-    pbar = tqdm(total=args.memory_capacity)
+    pbar = tqdm(total = args.memory_capacity)
     while i < args.memory_capacity:
         if done:
             state, done = env.reset(), False
@@ -166,7 +164,7 @@ def train():
 
     print('training')
     with open(f"{results_dir}/loss.csv", 'w') as fp:
-        fp.write('step,loss\n')  # write headers
+        fp.write('step,loss\n') # write headers
 
         batch = sample(mem, args)
         for step in tqdm(range(args.n_training_steps)):
@@ -177,7 +175,6 @@ def train():
 
     phi_net_path = network.save_phi(results_dir, 'phi_model.pth')
     print('Saved phi network to {}'.format(phi_net_path))
-
 
 if __name__ == '__main__':
     train()
