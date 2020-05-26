@@ -11,8 +11,6 @@ import numpy as np
 
 sns.set(style="darkgrid")
 
-default_lr = 0.0001
-
 def parse_filepath(fp, bin_size):
     try:
         loss = pd.read_csv(f"{fp}/loss.csv")
@@ -52,6 +50,8 @@ def plot(data, hue, style, seed, bin_size, savepath=None, show=True):
     height = 3 if len(data['env'].unique()) > 2 else 5
     col_wrap = 2 if len(data['env'].unique()) > 1 else 1
 
+    palette = "Paired"
+
     if isinstance(seed, list) or seed == 'average':
         g = sns.relplot(x='step',
                         y='loss',
@@ -64,6 +64,7 @@ def plot(data, hue, style, seed, bin_size, savepath=None, show=True):
                         aspect=1.5,
                         col='env',
                         col_wrap=col_wrap,
+                        palette=palette,
                         facet_kws={'sharey': False})
 
     elif seed == 'all':
@@ -80,6 +81,7 @@ def plot(data, hue, style, seed, bin_size, savepath=None, show=True):
                         aspect=1.5,
                         col='env',
                         col_wrap=col_wrap,
+                        palette=palette,
                         facet_kws={'sharey': False})
     else:
         raise ValueError(f"{seed} not a recognized choice")
