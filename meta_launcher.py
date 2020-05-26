@@ -14,10 +14,9 @@ def usage_msg():
         --argA val1
         --argB
         --argC val1 val2 val3
-        --command [command]
-        '''
+        --command [command]'''
 
-parser = argparse.ArgumentParser(description='Meta Launcher: ', usage=usage_msg())
+parser = argparse.ArgumentParser(description='Generate commands based on lists of arguments', usage=usage_msg())
 parser.add_argument('--command', type=str, required=True)
 command_arg, other_args = parser.parse_known_args(args)
 
@@ -38,7 +37,7 @@ if current_var is not None and not variables[current_var]:
     variables[current_var] = ['']
 if variables[None]:
     base_cmd = base_cmd + ' ' + ' '.join(variables[None])
-    del variables[None]
+del variables[None]
 
 cmd_list = [base_cmd]
 for key, value_list in variables.items():
