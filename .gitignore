@@ -88,14 +88,14 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# block everything except metrics.pth
+# block everything except metrics.pth, loss.csv and params.json
 results/**/*.html
 results/**/*.mem
 results/**/model.pth
 results/**/phi_model.pth
 results/**/checkpoint.pth
 results/**/phi_checkpoint.pth
-results/**/*.csv
+results/**/combined.csv
 results/plots/
 
 jobs/ 
