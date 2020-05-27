@@ -12,25 +12,27 @@ sns.set(style="darkgrid")
 default_lr = 0.0001
 
 def parse_filepath(fp):
+    # run-100_env-BreakoutNoFrameskip-v4_learningrate-0.003_architecture-pretrained_seed-3
+
+    # run-100
+    # _env-BreakoutNoFrameskip-v4
+    # _learningrate-0.003
+    # _architecture-pretrained
+    # _seed-3
     fp = os.path.split(fp)[1]
     tags = fp.split('_')
-    if len(tags) == 4:
-        if tags[1].split('-')[0] == 'learningrate':
-            lr = tags[1].split('-')[1]
+    if len(tags) == 5:
+        if tags[2].split('-')[0] == 'learningrate':
+            lr = tags[2].split('-')[1]
         else:
             lr = default_lr
-        arch = tags[2].split('-')[1]
-        if arch == 'online' and tags[1].split('-')[0] == 'markovlosscoef':
-            markov_metadata = {'markov_coef': tags[1].split('-')[1]}
-        else:
-            markov_metadata = {'markov_coef': 0.0}
+        arch = tags[3].split('-')[1]
         metadata = {
-            "env": tags[0],
+            "env": tags[1].replace('env-', ''),
             "lr": lr,
             "arch": arch,
             "seed": tags[3].split('-')[1],
         }
-        metadata.update(markov_metadata)
         return metadata
     else:
         print(f"Error in parsing filepath {fp}")
@@ -44,7 +46,11 @@ def collate_results(results_dir):
         metadata = parse_filepath(run)
         if metadata is None:
             continue
-        metrics_path = os.path.join(run, 'metrics.pth')
+        try:
+            metrics_path = os.path.join(run, 'metrics.pth')
+        except FileNotFoundError as e:
+            print(f"Error in parsing filepath {fp}: {e}")
+            continue
         metrics = torch.load(metrics_path)
         del metrics['best_avg_reward']
         metrics = [dict(zip(metrics, t)) for t in zip(*metrics.values())]
@@ -74,10 +80,10 @@ def plot(data, envs, lr, mlc, arch, seed, savepath=None, show=True):
         data = data[data['arch'].isin(arch)]
     else:
         arch = list(data['arch'].unique())
-    if mlc:
-        data = data[data['markov_coef'].isin(mlc)]
-    else:
-        mlc = list(data['markov_coef'].unique())
+    # if mlc:
+    #     data = data[data['markov_coef'].isin(mlc)]
+    # else:
+    #     mlc = list(data['markov_coef'].unique())
     if seed and isinstance(seed, list):
         if len(seed) == 1 and seed[0] in ['average', 'all']:
             seed = seed[0]
@@ -87,28 +93,32 @@ def plot(data, envs, lr, mlc, arch, seed, savepath=None, show=True):
 
     print(f"Plotting using {envs}, {lr}, {arch}, {seed}")
 
+
     # If asking for multiple envs, use facetgrid and adjust height
     height = 3 if len(envs) > 2 else 5
     col_wrap = 2 if len(envs) > 1 else 1
     # If multiple lr and arch, set hue and style accordingly
     if len(lr) > 1 and len(arch) > 1:
-        hue = 'arch'
-        style = 'lr'
+        hue = 'lr'
+        style = 'arch'
     elif len(lr) > 1 and len(arch) <= 1:
-        hue = None
-        style = 'lr'
-    elif len(mlc) > 1 and len(arch) > 1:
-        hue = 'arch'
-        style = 'markov_coef'
-    elif len(mlc) > 1 and len(arch) <= 1:
-        hue = None
-        style = 'markov_coef'
+        hue = 'lr'
+        style = 'arch'
+    # elif len(mlc) > 1 and len(arch) > 1:
+    #     hue = 'arch'
+    #     style = 'markov_coef'
+    # elif len(mlc) > 1 and len(arch) <= 1:
+    #     hue = None
+    #     style = 'markov_coef'
     elif len(arch) > 1 and len(lr) <= 1:
         hue = 'arch'
         style = None
     else:
         hue = None
         style = None
+
+    palette = sns.color_palette(n_colors=len(data[hue].unique()))
+
     if isinstance(seed, list) or seed == 'average':
         g = sns.relplot(x='frame',
                         y='average_reward',
@@ -121,6 +131,7 @@ def plot(data, envs, lr, mlc, arch, seed, savepath=None, show=True):
                         aspect=1.5,
                         col='env',
                         col_wrap=col_wrap,
+                        palette=palette,
                         facet_kws={'sharey': False})
 
     elif seed == 'all':
@@ -137,6 +148,7 @@ def plot(data, envs, lr, mlc, arch, seed, savepath=None, show=True):
                         aspect=1.5,
                         col='env',
                         col_wrap=col_wrap,
+                        palette=palette,
                         facet_kws={'sharey': False})
     else:
         raise ValueError(f"{seed} not a recognized choice")
