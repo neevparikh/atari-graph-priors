@@ -65,8 +65,4 @@ def get_run_tag(args):
         uuid_tag = args.uuid
 
     # Set tag for this run
-    run_tag = args.env
-    run_tag += '_' + args.uuid if args.uuid != 'env' else ''
-    run_tag += '_seed-' + str(args.seed)
-
-    return run_tag
+    return uuid_tag
