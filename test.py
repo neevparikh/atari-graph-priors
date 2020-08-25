@@ -6,13 +6,9 @@ from plotly.graph_objs import Scatter
 from plotly.graph_objs.scatter import Line
 import torch
 
-from env import Env
-
 
 # Test DQN
-def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
-    env = Env(args)
-    env.eval()
+def test(args, env, T, dqn, val_mem, metrics, results_dir, evaluate=False):
     metrics['steps'].append(T)
     T_rewards, T_Qs = [], []
 
@@ -24,7 +20,7 @@ def test(args, T, dqn, val_mem, metrics, results_dir, evaluate=False):
                 state, reward_sum, done = env.reset(), 0, False
 
             action = dqn.act_e_greedy(state)  # Choose an action ε-greedily
-            state, reward, done = env.step(action)  # Step
+            state, reward, done, _ = env.step(action)  # Step
             reward_sum += reward
             if args.render:
                 env.render()
