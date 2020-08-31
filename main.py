@@ -5,7 +5,6 @@ from datetime import datetime
 import os
 import pickle
 
-import atari_py
 import numpy as np
 import torch
 from tqdm import trange
@@ -40,10 +39,9 @@ if torch.cuda.is_available() and not args.disable_cuda:
 else:
     args.device = torch.device('cpu')
 
-
 # Simple ISO 8601 timestamped logger
-def log(s):
-    print('[' + str(datetime.now().strftime('%Y-%m-%dT%H:%M:%S')) + '] ' + s)
+def log(st):
+    print('[' + str(datetime.now().strftime('%Y-%m-%dT%H:%M:%S')) + '] ' + st)
 
 
 def load_memory(memory_path, disable_bzip):
@@ -82,12 +80,12 @@ if args.model is not None and not args.evaluate:
     mem = load_memory(args.memory, args.disable_bzip_memory)
 
 else:
-    mem = ReplayMemory(args, args.memory_capacity)
+    mem = ReplayMemory(args, args.memory_capacity, env.observation_space)
 
 priority_weight_increase = (1 - args.priority_weight) / (args.T_max - args.learn_start)
 
 # Construct validation memory
-val_mem = ReplayMemory(args, args.evaluation_size)
+val_mem = ReplayMemory(args, args.evaluation_size, test_env.observation_space)
 T, done = 0, True
 while T < args.evaluation_size:
     if done:
@@ -129,7 +127,7 @@ else:
 
             if T % args.evaluation_interval == 0:
                 dqn.eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = test(args, T, dqn, val_mem, metrics, results_dir)  # Test
+                avg_reward, avg_Q = test(args, test_env, T, dqn, val_mem, metrics, results_dir)  # Test
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' +
                     str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
                 dqn.train()  # Set DQN (online network) back to training mode

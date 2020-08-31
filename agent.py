@@ -23,7 +23,8 @@ class Agent():
         self.discount = args.discount
         self.norm_clip = args.norm_clip
 
-        self.online_net = DQN(args, self.n_actions).to(device=args.device)
+        self.online_net = DQN(args, self.n_actions, env.observation_space).to(device=args.device)
+        print(self.online_net)
         if args.model:  # Load pretrained model if provided
             if os.path.isfile(args.model):
                 state_dict = torch.load(
@@ -47,7 +48,7 @@ class Agent():
 
         self.online_net.train()
 
-        self.target_net = DQN(args, self.n_actions).to(device=args.device)
+        self.target_net = DQN(args, self.n_actions, env.observation_space).to(device=args.device)
         self.update_target_net()
         self.target_net.train()
         for param in self.target_net.parameters():
@@ -74,7 +75,6 @@ class Agent():
     def learn(self, mem):
         # Sample transitions
         idxs, states, actions, returns, next_states, nonterminals, weights = mem.sample(self.batch_size)
-
         # Calculate current state probabilities (online network noise already sampled)
         log_ps = self.online_net(states, log=True)  # Log probabilities log p(s_t, ·; θonline)
         log_ps_a = log_ps[range(self.batch_size), actions]  # log p(s_t, a_t; θonline)

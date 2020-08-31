@@ -5,6 +5,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from modules import Reshape
+
 
 # Factorised NoisyLinear layer with bias
 class NoisyLinear(nn.Module):
@@ -49,12 +51,14 @@ class NoisyLinear(nn.Module):
 
 
 class DQN(nn.Module):
-    def __init__(self, args, action_space):
+    def __init__(self, args, action_space, observation_space):
         super(DQN, self).__init__()
         self.atoms = args.atoms
+        self.architecture = args.architecture
         self.action_space = action_space
+        self.observation_space = observation_space
 
-        if args.architecture == 'canonical':
+        if self.architecture == 'canonical':
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0),
                                        nn.ReLU(),
                                        nn.Conv2d(32, 64, 4, stride=2, padding=0),
@@ -62,12 +66,22 @@ class DQN(nn.Module):
                                        nn.Conv2d(64, 64, 3, stride=1, padding=0),
                                        nn.ReLU())
             self.conv_output_size = 3136
-        elif args.architecture == 'data-efficient':
+        elif self.architecture == 'data-efficient':
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
                                        nn.ReLU(),
                                        nn.Conv2d(32, 64, 5, stride=5, padding=0),
                                        nn.ReLU())
             self.conv_output_size = 576
+        elif self.architecture == 'mlp':
+            self.input_shape = self.observation_space.shape[1] * args.history_length
+            self.convs = nn.Sequential(Reshape(-1, self.input_shape),
+                                       nn.Linear(self.input_shape, args.hidden_size),
+                                       nn.ReLU(),
+                                       nn.Linear(args.hidden_size, args.hidden_size),
+                                       nn.ReLU())
+            self.conv_output_size = args.hidden_size
+        else:
+            raise ValueError("architecture not recognized: {}".format(args.architecture))
         self.fc_h_v = NoisyLinear(self.conv_output_size, args.hidden_size, std_init=args.noisy_std)
         self.fc_h_a = NoisyLinear(self.conv_output_size, args.hidden_size, std_init=args.noisy_std)
         self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
@@ -77,7 +91,8 @@ class DQN(nn.Module):
 
     def forward(self, x, log=False):
         x = self.convs(x)
-        x = x.view(-1, self.conv_output_size)
+        if self.architecture in ['canonical', 'data-efficient']:
+            x = x.view(-1, self.conv_output_size)
         v = self.fc_z_v(F.relu(self.fc_h_v(x)))  # Value stream
         a = self.fc_z_a(F.relu(self.fc_h_a(x)))  # Advantage stream
         v, a = v.view(-1, 1, self.atoms), a.view(-1, self.action_space, self.atoms)

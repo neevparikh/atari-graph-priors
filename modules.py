@@ -7,8 +7,28 @@ import torch.nn.functional as F
 from torch.nn.functional import relu
 from torch.nn.functional import tanh
 
-from utils import sync_networks, conv2d_size_out
+from utils import conv2d_size_out
 
+class Reshape(torch.nn.Module):
+    """
+    Description:
+        Module that returns a view of the input which has a different size
+
+    Parameters:
+        - args : Int...
+            The desired size
+    """
+    def __init__(self, *args):
+        super().__init__()
+        self.shape = args
+
+    def __repr__(self):
+        s = self.__class__.__name__
+        s += '{}'.format(self.shape)
+        return s
+
+    def forward(self, x):
+        return x.view(*self.shape)
 
 # Adapted from https://github.com/tkipf/pygcn.
 class GCN(torch.nn.Module):

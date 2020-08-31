@@ -33,7 +33,6 @@ parser.add_argument('--history-length',
 parser.add_argument('--architecture',
                     type=str,
                     default='canonical',
-                    choices=['canonical', 'data-efficient'],
                     metavar='ARCH',
                     help='Network architecture')
 parser.add_argument('--hidden-size',

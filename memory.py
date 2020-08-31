@@ -3,22 +3,22 @@ from __future__ import division
 import numpy as np
 import torch
 
-Transition_dtype = np.dtype([('timestep', np.int32), ('state', np.uint8, (84, 84)),
-                             ('action', np.int32), ('reward', np.float32),
-                             ('nonterminal', np.bool_)])
-blank_trans = (0, np.zeros((84, 84), dtype=np.uint8), 0, 0.0, False)
-
-
 # Segment tree data structure where parent node values are sum/max of children node values
 class SegmentTree():
-    def __init__(self, size):
+    def __init__(self, size, observation_space):
         self.index = 0
         self.size = size
+        input_shape = observation_space.shape[1:]
+        self.blank_trans = (0, np.zeros(input_shape, dtype=observation_space.dtype), 0, 0.0, False)
+        self.trans_dtype = np.dtype([('timestep', np.int32), ('state', np.uint8, input_shape),
+                             ('action', np.int32), ('reward', np.float32),
+                             ('nonterminal', np.bool_)])
+
         self.full = False  # Used to track actual capacity
         self.tree_start = 2**(size -
                               1).bit_length() - 1  # Put all used node leaves on last tree level
         self.sum_tree = np.zeros((self.tree_start + self.size,), dtype=np.float32)
-        self.data = np.array([blank_trans] * size, dtype=Transition_dtype)  # Build structured array
+        self.data = np.array([self.blank_trans] * size, dtype=self.trans_dtype)  # Build structured array
         self.max = 1  # Initial max value to return (1 = 1^ω)
 
     # Updates nodes values from current tree
@@ -92,10 +92,12 @@ class SegmentTree():
 
 
 class ReplayMemory():
-    def __init__(self, args, capacity):
+    def __init__(self, args, capacity, observation_space):
         self.device = args.device
         self.capacity = capacity
         self.history = args.history_length
+        input_shape = observation_space.shape[1:]
+        self.blank_trans = (0, np.zeros(input_shape, dtype=observation_space.dtype), 0, 0.0, False)
         self.discount = args.discount
         self.n = args.multi_step
         self.priority_weight = args.priority_weight  # Initial importance sampling weight β, annealed to 1 over course of training
@@ -105,7 +107,8 @@ class ReplayMemory():
             [self.discount**i for i in range(self.n)], dtype=torch.float32,
             device=self.device)  # Discount-scaling vector for n-step returns
         self.transitions = SegmentTree(
-            capacity
+            capacity,
+            observation_space
         )  # Store transitions in a wrap-around cyclic buffer within a sum tree for querying priorities
 
     # Adds state and action at time t, reward and terminal at time t + 1
@@ -130,8 +133,8 @@ class ReplayMemory():
         for t in range(self.history, self.history + self.n):  # e.g. 4 5 6
             blank_mask[:, t] = np.logical_or(
                 blank_mask[:, t - 1],
-                transitions_firsts[:, t])  # True if current or past frame has timestep 0
-        transitions[blank_mask] = blank_trans
+                transitions_firsts[:, t])  # Tgerue if current or past frame has timestep 0
+        transitions[blank_mask] = self.blank_trans
         return transitions
 
     # Returns a valid sample from each segment
@@ -139,7 +142,9 @@ class ReplayMemory():
         segment_length = p_total / batch_size  # Batch size number of segments, based on sum over all probabilities
         segment_starts = np.arange(batch_size) * segment_length
         valid = False
-        while not valid:
+        for _ in range(20):
+            if valid:
+                break
             samples = np.random.uniform(
                 0.0, segment_length,
                 [batch_size]) + segment_starts  # Uniformly sample from within all segments
@@ -207,7 +212,7 @@ class ReplayMemory():
         for t in reversed(range(self.history - 1)):
             blank_mask[t] = np.logical_or(
                 blank_mask[t + 1], transitions_firsts[t + 1])  # If future frame has timestep 0
-        transitions[blank_mask] = blank_trans
+        transitions[blank_mask] = self.blank_trans
         state = torch.tensor(transitions['state'], dtype=torch.float32,
                              device=self.device).div_(255)  # Agent will turn into batch
         self.current_idx += 1

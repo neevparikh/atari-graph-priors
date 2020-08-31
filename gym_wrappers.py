@@ -1,5 +1,6 @@
 from collections import deque
 
+import torch
 import numpy as np
 import torchvision.transforms as T
 import gym
@@ -33,6 +34,24 @@ class IndexedObservation(gym.ObservationWrapper):
     def observation(self, observation):
         return observation[self.indices]
 
+class TorchTensorObservation(gym.ObservationWrapper):
+    """
+    Description:
+        Downsample the image observation to a given shape.
+    
+    Usage:
+        Pass in requisite shape (e.g. 84,84) and it will use opencv to resize the observation to
+        that shape
+
+    Notes:
+        - N/A
+    """
+    def __init__(self, env, device):
+        super(TorchTensorObservation, self).__init__(env)
+        self.device = device
+
+    def observation(self, observation):
+        return torch.from_numpy(observation).to(dtype=torch.float, device=self.device)
 
 # Adapted from https://github.com/openai/gym/blob/master/gym/wrappers/resize_observation.py
 class ResizeObservation(gym.ObservationWrapper):
@@ -145,7 +164,7 @@ class AtariPreprocess(gym.Wrapper):
             T.ToPILImage(mode='YCbCr'),
             T.Lambda(lambda img: img.split()[0]),
             T.Resize(self.shape),
-            T.Lambda(lambda img: np.array(img, copy=False)),
+            T.Lambda(lambda img: np.array(img)),
         ])
         self.observation_space = gym.spaces.Box(
             low=0,
@@ -202,62 +221,49 @@ class MaxAndSkipEnv(gym.Wrapper):
 
 
 class FrameStack(gym.Wrapper):
-    """
-    Description:
-        Stack k last frames. Returns lazy array, which is much more memory efficient. Allows action
-        stacking too via flag.
-    
-    Usage:
-        - action_stack: if actions should be tracked and stacked too.
-        - reset_action: what action to stack on reset
-        - k: is how many frames you want to stack. 
 
-    Notes:
-        - Have this support actions with dimension greater than 1.
-        - If you're stacking actions, then k must include the action frames.
-        - If you're stacking actions, then k must be even.
-    """
-    def __init__(self, env, k, action_stack=False, reset_action=None):
+    def __init__(self, env, k, device, cast=torch.float32, scale=True):
+        """Stack k last frames.
+        cast : torch dtype to cast to. If None, no cast
+        scale : bool. If True, divides by 255 (scaling to float). cast must be torch.float
+        Returns lazy array, which is much more memory efficient.
+        See Also
+        --------
+        LazyFrames
+        """
         gym.Wrapper.__init__(self, env)
-        self.total_k = k
-        if action_stack:
-            assert k % 2 == 0, "{} must be even, something went wrong".format(k)
-        self.per_stack = k // 2 if action_stack else k
-        self.frames = deque([], maxlen=self.per_stack)
-        self.actions = deque([], maxlen=self.per_stack) if action_stack else None
-        self.reset_action = reset_action
-
+        self.k = k
+        self.cast = cast
+        self.device = device
+        self.scale = scale
+        if self.scale:
+            assert cast == torch.float32 or cast == torch.float64, f"Cast must be torch.float, found {self.cast}"
+        self.frames = deque([], maxlen=k)
         shp = env.observation_space.shape
-        self.action_dtype = env.action_space.dtype
         self.observation_space = gym.spaces.Box(low=0,
                                                 high=255,
-                                                shape=((self.total_k,) + shp),
+                                                shape=((k,) + shp),
                                                 dtype=env.observation_space.dtype)
 
     def reset(self):
         ob = self.env.reset()
-        for _ in range(self.per_stack):
+        for _ in range(self.k):
             self.frames.append(ob)
-            if self.actions is not None:
-                self.actions.append(
-                    np.ones_like(ob, dtype=self.action_dtype) * self.reset_action)
         return self._get_ob()
 
     def step(self, action):
         ob, reward, done, info = self.env.step(action)
         self.frames.append(ob)
-        if self.actions is not None:
-            self.actions.append(np.ones_like(ob, dtype=self.action_dtype) * action)
         return self._get_ob(), reward, done, info
-
+    
     def _get_ob(self):
-        assert len(self.frames) == self.per_stack
-        if self.actions is not None:
-            return LazyFrames([
-                item for frame_action in zip(self.frames, self.actions) for item in frame_action
-                ])
-        else:
-            return LazyFrames(list(self.frames))
+        assert len(self.frames) == self.k
+        ob = torch.as_tensor(np.stack(list(self.frames), axis=0), device=self.device)
+        if self.cast is not None:
+            ob = ob.to(dtype=self.cast)
+        if self.scale: 
+            ob = ob.div_(255)
+        return ob
 
 
 class LazyFrames(object):

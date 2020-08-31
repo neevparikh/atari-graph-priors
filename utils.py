@@ -12,7 +12,7 @@ from gym.wrappers.gray_scale_observation import GrayScaleObservation
 from atariari.benchmark.wrapper import AtariARIWrapper
 
 from gym_wrappers import AtariPreprocess, MaxAndSkipEnv, FrameStack, ResetARI, \
-        ObservationDictToInfo, ResizeObservation, IndexedObservation
+        ObservationDictToInfo, ResizeObservation, IndexedObservation, TorchTensorObservation
 
 ## DQN utils ##
 
@@ -98,22 +98,23 @@ def append_timestamp(string, fmt_string=None):
         return string + "_" + str(now).replace(" ", "_")
 
 
-def make_atari(env, num_frames, action_stack=False):
+def make_atari(env, num_frames, device, action_stack=False):
     """ Wrap env in atari processed env """
     try:
         noop_action = env.get_action_meanings().index("NOOP")
     except ValueError:
         print("Cannot find NOOP in env, defaulting to 0")
         noop_action = 0
-    return FrameStack(MaxAndSkipEnv(AtariPreprocess(env), 4),
-                      num_frames,
-                      action_stack=action_stack,
-                      reset_action=noop_action)
+    env = AtariPreprocess(env)
+    env = MaxAndSkipEnv(env, 4)
+    env = FrameStack(env, num_frames, device)
+    # env = TorchTensorObservation(env, device)
+    return env
 
 
-def make_ari(env):
+def make_ari(env, device):
     """ Wrap env in reset to match observation """
-    return ResetARI(AtariARIWrapper(env))
+    return TorchTensorObservation(ResetARI(AtariARIWrapper(env)), device)
 
 
 def make_visual(env, shape):
@@ -122,6 +123,11 @@ def make_visual(env, shape):
     env = ObservationDictToInfo(env, "pixels")
     env = GrayScaleObservation(env)
     env = ResizeObservation(env, shape)
+    return env
+
+
+def make_default(env, device, num_frames):
+    env = FrameStack(env, num_frames, device)
     return env
 
 
@@ -137,11 +143,11 @@ def get_wrapped_env(env_string, wrapper_func, **kwargs):
 
 def initialize_environment(args):
     if args.ari:
-        env, test_env = get_wrapped_env(args.env, make_ari)
+        env, test_env = get_wrapped_env(args.env, make_ari, device=args.device)
     elif args.atari:
-        env, test_env = get_wrapped_env(args.env, make_atari, num_frames=args.history_length)
+        env, test_env = get_wrapped_env(args.env, make_atari, num_frames=args.history_length, device=args.device)
     else:
-        env, test_env = get_wrapped_env(args.env, lambda e: e)
+        env, test_env = get_wrapped_env(args.env, make_default, num_frames=args.history_length, device=args.device)
     env.reset()
     test_env.reset()
     env.seed(args.seed)
