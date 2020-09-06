@@ -6,7 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from modules import Reshape
-
+from graph_modules import Node_Embed
 
 # Factorised NoisyLinear layer with bias
 class NoisyLinear(nn.Module):
@@ -73,12 +73,78 @@ class DQN(nn.Module):
                                        nn.ReLU())
             self.conv_output_size = 576
         elif self.architecture == 'mlp':
-            self.input_shape = self.observation_space.shape[1] * args.history_length
+
+
+            berzerk_entities_to_index = {
+                    "player_x":19,
+                    "player_y":11,
+                    "player_direction":14,
+                    "player_missile_x":22,
+                    "player_missile_y":23,
+                    "player_missile_direction":21,
+                    "robot_missile_direction":26,
+                    "robot_missile_x":29,
+                    "robot_missile_y":30,
+                    "num_lives":90,
+                    "robots_killed_count":91,
+                    "game_level":92,
+                    "enemy_evilOtto_x":46,
+                    "enemy_evilOtto_y":89
+                    }
+
+            berzerk_latent_entities = ["player","game","evilOtto","player_missile","robot_missile"]
+
+            edge_type_0 = [
+            ("player_x","player"),
+            ("player_y","player"),
+            ("player_direction","player"),
+            ("num_lives","player"),
+            ("game_level","game"),
+            ("player_y","player"),
+            ("robots_killed_count","player"),
+            ("enemy_evilOtto_x","evilOtto"),
+            ("enemy_evilOtto_y","evilOtto"),
+            ("player_missile_x","player_missile"),
+            ("player_missile_y","player_missile"),
+            ("robot_missile_x","robot_missile"),
+            ("robot_missile_y","robot_missile")]
+
+            for i,value in enumerate(range(65,73)):
+                berzerk_entities_to_index["enemy_robots_x_{}".format(i)]  = value
+                berzerk_latent_entities.append("enemy_robot_{}".format(i))
+                edge_type_0.append(("enemy_robots_x_{}".format(i),"enemy_robot_{}".format(i)))
+
+            for i,value in enumerate(range(56, 64)):#Seems like bug in their berzerk code, y != x
+
+                #for i,value in enumerate(range(56, 65)):#Seems like bug in their berzerk code, y != x
+
+                berzerk_entities_to_index["enemy_robots_y_{}".format(i)]  = value
+                edge_type_0.append(("enemy_robots_y_{}".format(i),"enemy_robot_{}".format(i)))
+
+
+            for i,value in enumerate(range(93, 96)):
+                berzerk_entities_to_index["player_score_{}".format(i)]  = value
+                edge_type_0.append(("player_score_{}".format(i),"game"))
+
+
+            embed_size = 8
+            self.node_embed = Node_Embed(berzerk_entities_to_index,latent_entities=berzerk_latent_entities,edge_list=[edge_type_0],embed_size=embed_size)
+
+            # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
+            self.input_shape = args.history_length*len(berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
+
             self.convs = nn.Sequential(Reshape(-1, self.input_shape),
                                        nn.Linear(self.input_shape, args.hidden_size),
                                        nn.ReLU(),
                                        nn.Linear(args.hidden_size, args.hidden_size),
                                        nn.ReLU())
+
+            # self.convs = nn.Sequential(Reshape(-1, self.input_shape),
+            #                nn.ReLU(), #added
+            #                nn.Linear(self.input_shape, args.hidden_size),
+                          
+            #                #nn.Linear(args.hidden_size, args.hidden_size),
+            #                nn.ReLU())
             self.conv_output_size = args.hidden_size
         else:
             raise ValueError("architecture not recognized: {}".format(args.architecture))
@@ -89,7 +155,12 @@ class DQN(nn.Module):
                                   action_space * self.atoms,
                                   std_init=args.noisy_std)
 
+
     def forward(self, x, log=False):
+
+        x = F.relu(self.node_embed(x,extract_latent=True))
+        x = x.view(x.shape[0],x.shape[1],-1) #Flatten everything. May need to rethink.
+
         x = self.convs(x)
         if self.architecture in ['canonical', 'data-efficient']:
             x = x.view(-1, self.conv_output_size)
