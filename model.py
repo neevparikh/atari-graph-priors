@@ -77,9 +77,9 @@ class DQN(nn.Module):
 
             self.input_shape = self.observation_space.shape[1] * args.history_length
             self.convs = nn.Sequential(Reshape(-1, self.input_shape),
-                                       nn.Linear(self.input_shape, args.hidden_size),
+                                       nn.Linear(self.input_shape, 512),
                                        nn.ReLU(),
-                                       nn.Linear(args.hidden_size, args.hidden_size),
+                                       nn.Linear(512, 512),
                                        nn.ReLU())
             self.conv_output_size = args.hidden_size
 
@@ -137,20 +137,26 @@ class DQN(nn.Module):
                 edge_type_0.append(("player_score_{}".format(i),"game"))
 
 
-            embed_size = 64
-            final_embed_size = 8
+            embed_size = 32
+            final_embed_size = 32
             self.node_embed = Node_Embed(berzerk_entities_to_index,latent_entities=berzerk_latent_entities,edge_list=[edge_type_0],embed_size=embed_size,out_embed_size=final_embed_size)
             print("GCN param:",sum([param.numel() for param in self.node_embed.parameters()]))
 
             # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
-            self.input_shape = args.history_length*len(berzerk_latent_entities)*final_embed_size #self.observation_space.shape[1] * args.history_length
+            num_entities = len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)
+            self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
 
-            self.convs = nn.Sequential(Reshape(-1, self.input_shape),
-                                       nn.Linear(self.input_shape, args.hidden_size),
+            self.convs = nn.Sequential(nn.Conv2d(num_entities, 64, (final_embed_size,2), stride=1, padding=0),
+                                       nn.Conv2d(64,64, (1,2), stride=1, padding=0),
+
+                                         # nn.Linear(self.input_shape, args.hidden_size),
+                                       Reshape(-1, 128),
+                                       nn.Linear(128, 512),
                                        nn.ReLU(),
-                                       nn.Linear(args.hidden_size, args.hidden_size),
+                                       nn.Linear(512, 512),
                                        nn.ReLU())
-            self.conv_output_size = args.hidden_size
+
+            self.conv_output_size = 512
         else:
             raise ValueError("architecture not recognized: {}".format(args.architecture))
         self.fc_h_v = NoisyLinear(self.conv_output_size, args.hidden_size, std_init=args.noisy_std)
@@ -160,14 +166,16 @@ class DQN(nn.Module):
                                   action_space * self.atoms,
                                   std_init=args.noisy_std)
 
-        print("Body param:",sum([param.numel() for param in self.convs.parameters()]))
+
+        print("All param:",sum([param.numel() for param in self.parameters()]))
 
 
     def forward(self, x, log=False):
 
         if self.architecture == 'mlp_gcn':
-            x = F.relu(self.node_embed(x,extract_latent=True))
-            x = x.view(x.shape[0],x.shape[1],-1) #Flatten everything. May need to rethink.
+            x = F.relu(self.node_embed(x,extract_latent=False))
+            x = x.permute(0,2,3,1)
+            # x = x.view(x.shape[0],x.shape[1],-1) #Flatten everything. May need to rethink.
 
         x = self.convs(x)
 
