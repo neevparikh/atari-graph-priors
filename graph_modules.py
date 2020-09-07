@@ -11,7 +11,7 @@ from torch.nn.functional import tanh
 
 
 class Node_Embed(nn.Module):
-    def __init__(self, entities_to_index,latent_entities,edge_list,embed_size,device=0):
+    def __init__(self, entities_to_index,latent_entities,edge_list,embed_size,out_embed_size,device=0):
         super(Node_Embed, self).__init__()
 
         latent_entities = sorted(latent_entities)
@@ -47,9 +47,14 @@ class Node_Embed(nn.Module):
 
         self.gcn =  GCN(self.adjacency,
                  emb_size=embed_size,
-                 use_layers=2,
+                 use_layers=3,
                  activation="relu",
-                 device=0)
+                 device=device)
+
+        self.final_projection = torch.nn.Linear(embed_size, out_embed_size)
+
+        self.final_projection.to(device)
+
 
     def forward(self,x,extract_latent=False):
         scaled_key_input = self.one_hot_rep_template.repeat(x.shape[0],x.shape[1],1,1)*x[:,:,self.state_indices].unsqueeze(-1)
@@ -66,6 +71,9 @@ class Node_Embed(nn.Module):
         output = self.gcn(embedded_nodes)
         if extract_latent:
         	output = output[:,:,self.latent_node_indices ]
+
+        output = self.final_projection(output)
+
         return output
 
 
@@ -88,8 +96,7 @@ class GCN(nn.Module):
         elif activation == "tanh":
             self.activation = tanh
         else:
-            print("Bad activation:", self.activation)
-            exit()
+            exit("Bad activation:{}".format(self.activation))
 
         print("Using activation:", self.activation)
 
@@ -111,7 +118,7 @@ class GCN(nn.Module):
             for j in range(self.num_layers):
                 self.add_module(str((i, j)), self.weights[i][j])
 
-        self.final_mapping = torch.nn.Linear(self.emb_sz, self.emb_sz)
+        # self.final_mapping = torch.nn.Linear(self.emb_sz, self.emb_sz)
 
         print("finished initializing")
 
@@ -124,7 +131,6 @@ class GCN(nn.Module):
         for l in range(self.num_layers):
             layer_out = []
             for e in range(self.num_edges):
-               
                 weighting = F.normalize(self.A[e].float())
                 layer_out.append(self.ND_2D_mm(x.transpose(3,2),weighting).transpose(3,2))
             x = torch.cat([
@@ -132,5 +138,5 @@ class GCN(nn.Module):
                 type_features in enumerate(layer_out)
             ],
                           axis=1)
-        x = self.final_mapping(x)
+        # x = self.final_mapping(x)
         return x
