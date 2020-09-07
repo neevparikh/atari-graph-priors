@@ -147,9 +147,8 @@ class DQN(nn.Module):
             self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
 
             self.convs = nn.Sequential(nn.Conv2d(num_entities, 64, (final_embed_size,2), stride=1, padding=0),
+                                       nn.ReLU(),
                                        nn.Conv2d(64,64, (1,2), stride=1, padding=0),
-
-                                         # nn.Linear(self.input_shape, args.hidden_size),
                                        Reshape(-1, 128),
                                        nn.Linear(128, 512),
                                        nn.ReLU(),
