@@ -58,17 +58,15 @@ class Node_Embed(nn.Module):
 
     def forward(self,x,extract_latent=False):
         scaled_key_input = self.one_hot_rep_template.repeat(x.shape[0],x.shape[1],1,1)*x[:,:,self.state_indices].unsqueeze(-1)
+        
         one_hot_state_input_all = self.one_hot_state_input_template.repeat(x.shape[0],x.shape[1],1,1)
 
         one_hot_state_input_all[:,:,:len(self.state_keys),:len(self.state_keys)]*=scaled_key_input
-        # for i in range(4):
-        #     print(i)
-        #     print(x[0][0][self.state_indices])
-        #     print(one_hot_state_input_all[0][0])
-        # print("\n")
 
         embedded_nodes = self.lifting_layer(one_hot_state_input_all)
+
         output = self.gcn(embedded_nodes)
+
         if extract_latent:
         	output = output[:,:,self.latent_node_indices ]
 
@@ -123,6 +121,13 @@ class GCN(nn.Module):
         print("finished initializing")
 
     def ND_2D_mm(self,x,y):
+    	#t(x)= [bs,history,embeddings,num_nodes]
+    	#-> [bs*history*embeddings,num_nodes]
+    	#[46x46]
+    	#[bs*history*embeddings,num_nodes]
+    	#[bs,history,embeddings,num_nodes]
+    	#[bs,history,num_nodes,embeddings]
+
         x_new = x.reshape(-1,x.shape[-1])
         result = torch.mm(x_new,y)
         return result.view(list(x.shape[:-1])+[y.shape[-1]])
@@ -131,7 +136,8 @@ class GCN(nn.Module):
         for l in range(self.num_layers):
             layer_out = []
             for e in range(self.num_edges):
-                weighting = F.normalize(self.A[e].float())
+                weighting = F.normalize(self.A[e].float(),dim=0)
+
                 layer_out.append(self.ND_2D_mm(x.transpose(3,2),weighting).transpose(3,2))
             x = torch.cat([
                 self.activation(self.weights[e][l](type_features)) for e,

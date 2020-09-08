@@ -57,6 +57,7 @@ class DQN(nn.Module):
         self.architecture = args.architecture
         self.action_space = action_space
         self.observation_space = observation_space
+        self.env = args.env
 
         if self.architecture == 'canonical':
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0),
@@ -83,76 +84,32 @@ class DQN(nn.Module):
                                        nn.ReLU())
             self.conv_output_size = args.hidden_size
 
+
         elif self.architecture == 'mlp_gcn':
 
-            berzerk_entities_to_index = {
-                    "player_x":19,
-                    "player_y":11,
-                    "player_direction":14,
-                    "player_missile_x":22,
-                    "player_missile_y":23,
-                    "player_missile_direction":21,
-                    "robot_missile_direction":26,
-                    "robot_missile_x":29,
-                    "robot_missile_y":30,
-                    "num_lives":90,
-                    "robots_killed_count":91,
-                    "game_level":92,
-                    "enemy_evilOtto_x":46,
-                    "enemy_evilOtto_y":89
-                    }
-
-            berzerk_latent_entities = ["player","game","evilOtto","player_missile","robot_missile"]
-
-            edge_type_0 = [
-            ("player_x","player"),
-            ("player_y","player"),
-            ("player_direction","player"),
-            ("num_lives","game"),
-            ("game_level","game"),
-            ("player_y","player"),
-            ("robots_killed_count","game"),
-            ("enemy_evilOtto_x","evilOtto"),
-            ("enemy_evilOtto_y","evilOtto"),
-            ("player_missile_x","player_missile"),
-            ("player_missile_y","player_missile"),
-            ("robot_missile_x","robot_missile"),
-            ("robot_missile_y","robot_missile")]
-
-            for i,value in enumerate(range(65,73)):
-                berzerk_entities_to_index["enemy_robots_x_{}".format(i)]  = value
-                berzerk_latent_entities.append("enemy_robot_{}".format(i))
-                edge_type_0.append(("enemy_robots_x_{}".format(i),"enemy_robot_{}".format(i)))
-
-            for i,value in enumerate(range(56, 64)):#Seems like bug in their berzerk code, y != x
-
-                #for i,value in enumerate(range(56, 65)):#Seems like bug in their berzerk code, y != x
-
-                berzerk_entities_to_index["enemy_robots_y_{}".format(i)]  = value
-                edge_type_0.append(("enemy_robots_y_{}".format(i),"enemy_robot_{}".format(i)))
-
-
-            for i,value in enumerate(range(93, 96)):
-                berzerk_entities_to_index["player_score_{}".format(i)]  = value
-                edge_type_0.append(("player_score_{}".format(i),"game"))
+            if self.env == "Berzerk-ram-v0":
+                entities_to_index,latent_entities,edge_list=self.get_berzerk_info()
+            elif self.env == "Asteroids-ram-v0":
+                entities_to_index,latent_entities,edge_list=self.get_asteroids_info()
+            else:
+                exit(self.env,"is not configured.")
 
 
             embed_size = 32
             final_embed_size = 32
-            self.node_embed = Node_Embed(berzerk_entities_to_index,latent_entities=berzerk_latent_entities,edge_list=[edge_type_0],embed_size=embed_size,out_embed_size=final_embed_size)
+            self.node_embed = Node_Embed(entities_to_index,latent_entities=latent_entities,edge_list=edge_list,embed_size=embed_size,out_embed_size=final_embed_size)
             print("GCN param:",sum([param.numel() for param in self.node_embed.parameters()]))
 
             # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
-            num_entities = len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)
-            self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
+            num_entities = len(list(entities_to_index.keys())+latent_entities)
+            #self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
 
-            self.convs = nn.Sequential(nn.Conv2d(num_entities, 64, (final_embed_size,2), stride=1, padding=0),
+            self.convs = nn.Sequential(nn.Conv2d(num_entities, 128, (final_embed_size,2), stride=1, padding=0),
                                        nn.ReLU(),
-                                       nn.Conv2d(64,64, (1,2), stride=1, padding=0),
-                                       Reshape(-1, 128),
-                                       nn.Linear(128, 512),
+                                       nn.Conv2d(128, 128, (1,2), stride=1, padding=0),
+                                       Reshape(-1, 256),
                                        nn.ReLU(),
-                                       nn.Linear(512, 512),
+                                       nn.Linear(256, 512),
                                        nn.ReLU())
 
             self.conv_output_size = 512
@@ -167,6 +124,107 @@ class DQN(nn.Module):
 
 
         print("All param:",sum([param.numel() for param in self.parameters()]))
+
+
+    def get_berzerk_info(self):
+        berzerk_entities_to_index = {
+                "player_x":19,
+                "player_y":11,
+                "player_direction":14,
+                "player_missile_x":22,
+                "player_missile_y":23,
+                "player_missile_direction":21,
+                "robot_missile_direction":26,
+                "robot_missile_x":29,
+                "robot_missile_y":30,
+                "num_lives":90,
+                "robots_killed_count":91,
+                "game_level":92,
+                "enemy_evilOtto_x":46,
+                "enemy_evilOtto_y":89
+                }
+
+        berzerk_latent_entities = ["player","game","evilOtto","player_missile","robot_missile"]
+
+        edge_type_0 = [
+        ("player_x","player"),
+        ("player_y","player"),
+        ("player_direction","player"),
+        ("num_lives","game"),
+        ("game_level","game"),
+        ("player_y","player"),
+        ("robots_killed_count","game"),
+        ("enemy_evilOtto_x","evilOtto"),
+        ("enemy_evilOtto_y","evilOtto"),
+        ("player_missile_x","player_missile"),
+        ("player_missile_y","player_missile"),
+        ("robot_missile_x","robot_missile"),
+        ("robot_missile_y","robot_missile")]
+
+        for i,value in enumerate(range(65,73)):
+            berzerk_entities_to_index["enemy_robots_x_{}".format(i)]  = value
+            berzerk_latent_entities.append("enemy_robot_{}".format(i))
+            edge_type_0.append(("enemy_robots_x_{}".format(i),"enemy_robot_{}".format(i)))
+
+        for i,value in enumerate(range(56, 64)):#Seems like bug in their berzerk code, y != x
+
+            #for i,value in enumerate(range(56, 65)):#Seems like bug in their berzerk code, y != x
+
+            berzerk_entities_to_index["enemy_robots_y_{}".format(i)]  = value
+            edge_type_0.append(("enemy_robots_y_{}".format(i),"enemy_robot_{}".format(i)))
+
+
+        for i,value in enumerate(range(93, 96)):
+            berzerk_entities_to_index["player_score_{}".format(i)]  = value
+            edge_type_0.append(("player_score_{}".format(i),"game"))
+
+        return berzerk_entities_to_index,berzerk_latent_entities,[edge_type_0]
+
+    def get_asteroids_info(self):
+        asteroids_entities_to_index = {
+                      "player_x":73,
+                      "player_y":74,
+                      "num_lives_direction":60,
+                      "player_score_high":61,
+                      "player_score_low":62,
+                      "player_missile_x1":83,
+                      "player_missile_x2":84,
+                      "player_missile_y1":86,
+                      "player_missile_y2":87,
+                      "player_missile1_direction":89,
+                      "player_missile2_direction":90
+                }
+
+        asteroids_latent_entities = ["player","game","player_missile1","player_missile2"]
+
+        asteroids_y = [3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17, 18, 19]
+        asteroids_x= [21, 22, 23, 24, 25, 26, 27, 30, 31, 32, 33, 34, 35, 36, 37]
+
+        assert len(asteroids_x) == len(asteroids_y)
+
+        edge_type_0 = [
+        ("player_x","player"),
+        ("player_y","player"),
+        ("num_lives_direction","game"),
+        ("player_score_high","game"),
+        ("player_score_low","game"),
+        ("player_missile_x1","player_missile1"),
+        ("player_missile_y1","player_missile1"),
+        ("player_missile_x2","player_missile2"),
+        ("player_missile_y2","player_missile2")]
+
+        for i in range(len(asteroids_x)):
+            asteroids_entities_to_index["asteroids_x_{}".format(i)]  = asteroids_x[i]
+            asteroids_entities_to_index["asteroids_y_{}".format(i)]  = asteroids_y[i]
+
+
+            asteroids_latent_entities.append("asteroids_{}".format(i))
+            edge_type_0.append(("asteroids_x_{}".format(i),"asteroids_{}".format(i)))
+            edge_type_0.append(("asteroids_y_{}".format(i),"asteroids_{}".format(i)))
+
+
+        return asteroids_entities_to_index,asteroids_latent_entities,[edge_type_0]
+
 
 
     def forward(self, x, log=False):
