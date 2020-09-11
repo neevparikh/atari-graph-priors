@@ -13,7 +13,7 @@ from agent import Agent
 from utils import initialize_environment
 from memory import ReplayMemory
 from test import test
-from parser_renamed import parser
+from parser import parser
 
 # Setup
 args = parser.parse_args()

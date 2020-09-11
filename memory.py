@@ -17,7 +17,7 @@ class SegmentTree():
         self.full = False  # Used to track actual capacity
         self.tree_start = 2**(size -
                               1).bit_length() - 1  # Put all used node leaves on last tree level
-        self.sum_tree = np.zeros((self.tree_start + self.size,), dtype=np.float32)
+        self.sum_tree = np.zeros((self.tree_start + self.size + 1,), dtype=np.float32)
         self.data = np.array([self.blank_trans] * size, dtype=self.trans_dtype)  # Build structured array
         self.max = 1  # Initial max value to return (1 = 1^ω)
 
