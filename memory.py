@@ -51,10 +51,10 @@ class ReplayMemory():
         s['indexes'] = s['indexes'].astype(np.int32)
         return torchify((s['indexes'], torch.int32),
                         (s['obs'], torch.float32),
-                        (s['act'], torch.uint8),
-                        (s['rew'], torch.float32),
+                        (np.squeeze(s['act'], 1), torch.uint8),
+                        (np.squeeze(s['rew'], 1), torch.float32),
                         (s['next_obs'], torch.float32),
-                        (s['done'], torch.uint8),
+                        (np.squeeze(s['done'], 1), torch.uint8),
                         (s['weights'], torch.float32), device=self.device)
 
     def update_priorities(self, indexes, new_priorities):
