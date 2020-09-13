@@ -80,26 +80,26 @@ if args.model is not None and not args.evaluate:
     mem = load_memory(args.memory, args.disable_bzip_memory)
 
 else:
-    mem = ReplayMemory(args, args.memory_capacity, env.observation_space)
+    mem = ReplayMemory(args, args.memory_capacity, env)
 
 priority_weight_increase = (1 - args.priority_weight) / (args.T_max - args.learn_start)
 
-# Construct validation memory
-val_mem = ReplayMemory(args, args.evaluation_size, test_env.observation_space)
-T, done = 0, True
-while T < args.evaluation_size:
-    if done:
-        state, done = env.reset(), False
+# # Construct validation memory
+# val_mem = ReplayMemory(args, args.evaluation_size, test_env)
+# T, done = 0, True
+# while T < args.evaluation_size:
+#     if done:
+#         state, done = env.reset(), False
 
-    next_state, _, done, _ = env.step(np.random.randint(0, n_actions))
-    val_mem.append(state, -1, 0.0, done)
-    state = next_state
-    T += 1
+#     next_state, _, done, _ = env.step(np.random.randint(0, n_actions))
+#     val_mem.append(state, -1, 0.0, done)
+#     state = next_state
+#     T += 1
 
 if args.evaluate:
     dqn.eval()  # Set DQN (online network) to evaluation mode
-    avg_reward, avg_Q = test(args, test_env, 0, dqn, val_mem, metrics, results_dir, evaluate=True)  # Test
-    print('Avg. reward: ' + str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
+    avg_reward = test(args, test_env, 0, dqn, metrics, results_dir, evaluate=True)  # Test
+    print('Avg. reward: ' + str(avg_reward))
 else:
     # Training loop
     dqn.train()
@@ -107,6 +107,7 @@ else:
     for T in trange(1, args.T_max + 1):
         if done:
             state, done = env.reset(), False
+            mem.buffer.on_episode_end()
 
         if T % args.replay_frequency == 0:
             dqn.reset_noise()  # Draw a new set of noisy weights
@@ -115,7 +116,7 @@ else:
         next_state, reward, done, _ = env.step(action)  # Step
         if args.reward_clip > 0:
             reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
-        mem.append(state, action, reward, done)  # Append transition to memory
+        mem.append(state, next_state, action, reward, done)  # Append transition to memory
 
         # Train and test
         if T >= args.learn_start:
@@ -127,9 +128,9 @@ else:
 
             if T % args.evaluation_interval == 0:
                 dqn.eval()  # Set DQN (online network) to evaluation mode
-                avg_reward, avg_Q = test(args, test_env, T, dqn, val_mem, metrics, results_dir)  # Test
+                avg_reward = test(args, test_env, T, dqn, metrics, results_dir)  # Test
                 log('T = ' + str(T) + ' / ' + str(args.T_max) + ' | Avg. reward: ' +
-                    str(avg_reward) + ' | Avg. Q: ' + str(avg_Q))
+                    str(avg_reward))
                 dqn.train()  # Set DQN (online network) back to training mode
 
                 # If memory path provided, save it

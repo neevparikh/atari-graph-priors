@@ -89,6 +89,8 @@ def reset_seeds(seed):
     random.seed(seed)
     np.random.seed(seed)
 
+def torchify(*args, device):
+    return tuple(map(lambda t: torch.as_tensor(t[0], device=device, dtype=t[1]), args))
 
 def append_timestamp(string, fmt_string=None):
     now = datetime.now()

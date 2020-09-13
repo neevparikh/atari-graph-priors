@@ -23,6 +23,8 @@ class Agent():
         self.discount = args.discount
         self.norm_clip = args.norm_clip
 
+        self.device = args.device
+
         self.online_net = DQN(args, self.n_actions, env.observation_space).to(device=args.device)
         print(self.online_net)
         if args.model:  # Load pretrained model if provided
@@ -64,6 +66,7 @@ class Agent():
 
     # Acts based on single state (no batch)
     def act(self, state):
+        state = torch.as_tensor(state, device=self.device, dtype=torch.float)
         with torch.no_grad():
             return (self.online_net(state.unsqueeze(0)) * self.support).sum(2).argmax(1).item()
 
