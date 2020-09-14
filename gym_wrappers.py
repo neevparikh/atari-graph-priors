@@ -326,9 +326,9 @@ class CombineRamPixel(gym.ObservationWrapper):
         # self.pixel_env = gym.make(get_pixel_name.replace('-ram',''))
         # print("Found atari game:",self.pixel_env.unwrapped.spec.id)
 
-        self.pixel_env = AtariPreprocessPixelInput()
+        self.pixel_wrap = AtariPreprocessPixelInput()
 
-        self.pixel_shape = self.pixel_env.observation_space.shape
+        self.pixel_shape = self.pixel_wrap.observation_space.shape
         self.ram_shape = self.observation_space.shape
         new_total_shape = (self.ram_shape[0]+self.pixel_shape[0]*self.pixel_shape[1],)
         
@@ -343,5 +343,5 @@ class CombineRamPixel(gym.ObservationWrapper):
          return np.concatenate((ram_state,np.reshape(pixel_state,-1)))
 
     def observation(self, obs):
-        pixel_state = self.pixel_env.get_state(self.render(mode='rgb_array'))
-        return  self.combine_states(obs,pixel_state)
+        pixel_state = self.pixel_wrap.get_state(self.render(mode='rgb_array'))
+        return  self.combine_states(obs, pixel_state)

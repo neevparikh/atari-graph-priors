@@ -7,6 +7,7 @@ from torch.nn import functional as F
 
 from modules import Reshape
 from graph_modules import Node_Embed
+from utils import conv2d_size_out
 
 # Factorised NoisyLinear layer with bias
 class NoisyLinear(nn.Module):
@@ -51,13 +52,16 @@ class NoisyLinear(nn.Module):
 
 
 class DQN(nn.Module):
-    def __init__(self, args, action_space, observation_space):
+    def __init__(self, args, action_space, env):
         super(DQN, self).__init__()
         self.atoms = args.atoms
         self.architecture = args.architecture
         self.action_space = action_space
-        self.observation_space = observation_space
-        self.env = args.env
+        self.observation_space = env.observation_space
+        self.env = env
+        self.env_str = args.env
+        self.pixel_shape = self.env.pixel_shape
+        self.ram_len = self.env.ram_shape[0]
         self.history_length = args.history_length
 
         if self.architecture == 'canonical':
@@ -67,13 +71,22 @@ class DQN(nn.Module):
                                        nn.ReLU(),
                                        nn.Conv2d(64, 64, 3, stride=1, padding=0),
                                        nn.ReLU())
-            self.conv_output_size = 3136
+
+            sz = conv2d_size_out(self.pixel_shape, (8,8), 4)
+            sz = conv2d_size_out(sz, (4,4), 2)
+            sz = conv2d_size_out(sz, (3,3), 2)
+            self.conv_output_size = sz[0] * sz[1] * 64
+            # self.conv_output_size = 3136
         elif self.architecture == 'data-efficient':
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
                                        nn.ReLU(),
                                        nn.Conv2d(32, 64, 5, stride=5, padding=0),
                                        nn.ReLU())
-            self.conv_output_size = 576
+
+            sz = conv2d_size_out(self.pixel_shape, (5,5), 5)
+            sz = conv2d_size_out(sz, (5,5), 5)
+            self.conv_output_size = sz[0] * sz[1] * 64
+            # self.conv_output_size = 576
 
         elif self.architecture == 'mlp':
 
@@ -88,13 +101,12 @@ class DQN(nn.Module):
 
         elif self.architecture == 'mlp-gcn':
 
-            if self.env == "Berzerk-ram-v0":
+            if self.env_str == "Berzerk-ram-v0":
                 entities_to_index,latent_entities,edge_list=self.get_berzerk_info()
-            elif self.env == "Asteroids-ram-v0":
+            elif self.env_str == "Asteroids-ram-v0":
                 entities_to_index,latent_entities,edge_list=self.get_asteroids_info()
             else:
-                exit(self.env,"is not configured.")
-
+                raise ValueError("{} is not configured.".format(self.env_str))
 
             embed_size = 32
             final_embed_size = 32
@@ -117,15 +129,14 @@ class DQN(nn.Module):
 
             self.conv_output_size = 512
 
-        elif self.architecture == 'cnn-data-efficient-gcn-ram':
+        elif self.architecture == 'de-gcn-ram':
 
-            if self.env == "Berzerk-ram-v0":
+            if self.env_str == "Berzerk-ram-v0":
                 entities_to_index,latent_entities,edge_list=self.get_berzerk_info()
-            elif self.env == "Asteroids-ram-v0":
+            elif self.env_str == "Asteroids-ram-v0":
                 entities_to_index,latent_entities,edge_list=self.get_asteroids_info()
             else:
-                exit(self.env,"is not configured.")
-
+                raise ValueError("{} is not configured.".format(self.env_str))
 
             embed_size = 64
             final_embed_size = 64
@@ -140,16 +151,16 @@ class DQN(nn.Module):
                                        nn.ReLU(),
                                        nn.Conv2d(64, 64, (1,2), stride=1, padding=0),
                                        nn.ReLU(),
-                                       Reshape(-1, 128))
+                                       Reshape(-1, self.ram_len))
 
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
                                        nn.ReLU(),
                                        nn.Conv2d(32, 64, 5, stride=5, padding=0),
                                        nn.ReLU())
 
-            self.conv_output_size = 576
-
-            
+            sz = conv2d_size_out(self.pixel_shape, (5,5), 5)
+            sz = conv2d_size_out(sz, (5,5), 5)
+            self.conv_output_size = sz[0] * sz[1] * 64
 
         else:
             raise ValueError("architecture not recognized: {}".format(args.architecture))
@@ -267,14 +278,16 @@ class DQN(nn.Module):
 
     def forward(self, x, log=False):
 
-        if self.architecture in 'cnn-data-efficient-gcn-ram': #['cnn-data-efficient-ram','cnn-data-efficient-no-ram']:
-            ram_state = x[:,:,:128].contiguous()
-            pixel_state = x[:,:,128:].view(-1,self.history_length, 84,84).contiguous()
-
+        if self.architecture == 'de-gcn-ram':
+            ram_state = x[:,:,:self.ram_len].contiguous()
+            pixel_state = x[:,:,self.ram_len:].view(-1,self.history_length, *self.pixel_shape).contiguous()
 
             x = self.convs(pixel_state).view(-1,self.conv_output_size)
-            entities = F.relu(self.node_embed(ram_state,extract_latent=False))
-            entities = entities.permute(0,2,3,1)
+
+            #bs,4,num entities,embed_size
+            entities = F.relu(self.node_embed(ram_state,extract_latent=False)) 
+            #bs,num entities,embed_size,4
+            entities = entities.permute(0,2,3,1).contiguous()
             entities = self.entity_encoder(entities)
  
             x = torch.cat((x,entities),-1)

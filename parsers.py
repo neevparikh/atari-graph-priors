@@ -32,7 +32,7 @@ parser.add_argument('--history-length',
                     help='Number of consecutive states processed')
 parser.add_argument('--architecture',
                     type=str,
-                    default='canonical',
+                    default='de-gcn-ram',
                     metavar='ARCH',
                     help='Network architecture')
 parser.add_argument('--hidden-size',

@@ -25,7 +25,7 @@ class Agent():
 
         self.device = args.device
 
-        self.online_net = DQN(args, self.n_actions, env.observation_space).to(device=args.device)
+        self.online_net = DQN(args, self.n_actions, env).to(device=args.device)
         print(self.online_net)
         if args.model:  # Load pretrained model if provided
             if os.path.isfile(args.model):
@@ -50,7 +50,7 @@ class Agent():
 
         self.online_net.train()
 
-        self.target_net = DQN(args, self.n_actions, env.observation_space).to(device=args.device)
+        self.target_net = DQN(args, self.n_actions, env).to(device=args.device)
         self.update_target_net()
         self.target_net.train()
         for param in self.target_net.parameters():
