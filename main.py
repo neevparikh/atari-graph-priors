@@ -13,7 +13,7 @@ from agent import Agent
 from utils import initialize_environment
 from memory import ReplayMemory
 from test import test
-from parser import parser
+from parsers import parser
 
 # Setup
 args = parser.parse_args()
@@ -116,6 +116,10 @@ else:
         next_state, reward, done, _ = env.step(action)  # Step
         if args.reward_clip > 0:
             reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
+
+        import pdb
+
+        pdb.set_trace()
         mem.append(state, next_state, action, reward, done)  # Append transition to memory
 
         # Train and test

@@ -12,7 +12,8 @@ from gym.wrappers.gray_scale_observation import GrayScaleObservation
 from atariari.benchmark.wrapper import AtariARIWrapper
 
 from gym_wrappers import AtariPreprocess, MaxAndSkipEnv, FrameStack, ResetARI, \
-        ObservationDictToInfo, ResizeObservation, IndexedObservation, TorchTensorObservation
+        ObservationDictToInfo, ResizeObservation, IndexedObservation, TorchTensorObservation, \
+         CombineRamPixel
 
 ## DQN utils ##
 
@@ -114,6 +115,19 @@ def make_atari(env, num_frames, device, action_stack=False):
     return env
 
 
+
+def make_atari_RAM(env, num_frames, device, action_stack=False):
+    """ Wrap env in atari processed env """
+   
+    env = CombineRamPixel(env)
+    env = MaxAndSkipEnv(env, 4)
+    env = FrameStack(env, num_frames, device)
+    # env = TorchTensorObservation(env, device)
+    return env
+
+
+
+
 def make_ari(env, device):
     """ Wrap env in reset to match observation """
     return TorchTensorObservation(ResetARI(AtariARIWrapper(env)), device)
@@ -148,8 +162,11 @@ def initialize_environment(args):
         env, test_env = get_wrapped_env(args.env, make_ari, device=args.device)
     elif args.atari:
         env, test_env = get_wrapped_env(args.env, make_atari, num_frames=args.history_length, device=args.device)
+    #else:
+    #    env, test_env = get_wrapped_env(args.env, make_default, num_frames=args.history_length, device=args.device)
     else:
-        env, test_env = get_wrapped_env(args.env, make_default, num_frames=args.history_length, device=args.device)
+        env, test_env = get_wrapped_env(args.env, make_atari_RAM, num_frames=args.history_length, device=args.device)
+
     env.reset()
     test_env.reset()
     env.seed(args.seed)

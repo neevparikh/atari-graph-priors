@@ -219,7 +219,6 @@ class MaxAndSkipEnv(gym.Wrapper):
         max_frame = self._obs_buffer.max(axis=0)
         return max_frame, total_reward, done, info
 
-
 class FrameStack(gym.Wrapper):
 
     def __init__(self, env, k, device, cast=torch.float32, scale=True):
@@ -258,12 +257,13 @@ class FrameStack(gym.Wrapper):
     
     def _get_ob(self):
         assert len(self.frames) == self.k
-        # ob = torch.as_tensor(np.stack(list(self.frames), axis=0), device=self.device)
-        # if self.cast is not None:
-        #     ob = ob.to(dtype=self.cast)
-        # if self.scale: 
-        #     ob = ob.div_(255)
+        #ob = torch.as_tensor(np.stack(list(self.frames), axis=0), device=self.device)
         ob = np.stack(list(self.frames), axis=0)
+
+        if self.cast is not None:
+            ob = ob.to(dtype=self.cast)
+        if self.scale: 
+            ob = ob.div_(255)
         return ob
 
 
@@ -297,3 +297,52 @@ class LazyFrames(object):
 
     def __getitem__(self, i):
         return self._frames[i]
+
+class AtariPreprocessPixelInput():
+    def __init__(self, shape=(84, 84)): #Do we still want to do this?
+        self.shape = shape
+        self.transforms = T.Compose([
+            T.ToPILImage(mode='YCbCr'),
+            T.Lambda(lambda img: img.split()[0]),
+            T.Resize(self.shape),
+            T.Lambda(lambda img: np.array(img)),
+        ])
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=self.shape,
+            dtype=np.uint8,
+        )
+   
+    def get_state(self, rendered_pixel):
+        return self.transforms(rendered_pixel)
+
+class CombineRamPixel(gym.ObservationWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+
+        self.env = env
+
+        # get_pixel_name = env.unwrapped.spec.id
+        # self.pixel_env = gym.make(get_pixel_name.replace('-ram',''))
+        # print("Found atari game:",self.pixel_env.unwrapped.spec.id)
+
+        self.pixel_env = AtariPreprocessPixelInput()
+
+        self.pixel_shape = self.pixel_env.observation_space.shape
+        self.ram_shape = self.observation_space.shape
+        new_total_shape = (self.ram_shape[0]+self.pixel_shape[0]*self.pixel_shape[1],)
+        
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=new_total_shape,
+            dtype=np.float32
+        )
+
+    def combine_states(self,ram_state,pixel_state):
+         return np.concatenate((ram_state,np.reshape(pixel_state,-1)))
+
+    def observation(self, obs):
+        pixel_state = self.pixel_env.get_state(self.render(mode='rgb_array'))
+        return  self.combine_states(obs,pixel_state)
