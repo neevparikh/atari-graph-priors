@@ -58,6 +58,7 @@ class DQN(nn.Module):
         self.action_space = action_space
         self.observation_space = observation_space
         self.env = args.env
+        self.history_length = args.history_length
 
         if self.architecture == 'canonical':
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0),
@@ -85,7 +86,7 @@ class DQN(nn.Module):
             self.conv_output_size = args.hidden_size
 
 
-        elif self.architecture == 'mlp_gcn':
+        elif self.architecture == 'mlp-gcn':
 
             if self.env == "Berzerk-ram-v0":
                 entities_to_index,latent_entities,edge_list=self.get_berzerk_info()
@@ -111,12 +112,49 @@ class DQN(nn.Module):
                                        nn.ReLU(),
                                        nn.Linear(256, 512),
                                        nn.ReLU())
+            #self.convs(image); gcn(ram)
+            # 46*4*8
 
             self.conv_output_size = 512
+
+        elif self.architecture == 'cnn-data-efficient-gcn-ram':
+
+            if self.env == "Berzerk-ram-v0":
+                entities_to_index,latent_entities,edge_list=self.get_berzerk_info()
+            elif self.env == "Asteroids-ram-v0":
+                entities_to_index,latent_entities,edge_list=self.get_asteroids_info()
+            else:
+                exit(self.env,"is not configured.")
+
+
+            embed_size = 64
+            final_embed_size = 64
+            self.node_embed = Node_Embed(entities_to_index,latent_entities=latent_entities,edge_list=edge_list,embed_size=embed_size,out_embed_size=final_embed_size)
+            print("GCN param:",sum([param.numel() for param in self.node_embed.parameters()]))
+
+            # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
+            num_entities = len(list(entities_to_index.keys())+latent_entities)
+            #self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
+
+            self.entity_encoder = nn.Sequential(nn.Conv2d(num_entities, 64, (final_embed_size,2), stride=1, padding=0),
+                                       nn.ReLU(),
+                                       nn.Conv2d(64, 64, (1,2), stride=1, padding=0),
+                                       nn.ReLU(),
+                                       Reshape(-1, 128))
+
+            self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
+                                       nn.ReLU(),
+                                       nn.Conv2d(32, 64, 5, stride=5, padding=0),
+                                       nn.ReLU())
+
+            self.conv_output_size = 576
+
+            
+
         else:
             raise ValueError("architecture not recognized: {}".format(args.architecture))
-        self.fc_h_v = NoisyLinear(self.conv_output_size, args.hidden_size, std_init=args.noisy_std)
-        self.fc_h_a = NoisyLinear(self.conv_output_size, args.hidden_size, std_init=args.noisy_std)
+        self.fc_h_v = NoisyLinear(self.conv_output_size+128, args.hidden_size, std_init=args.noisy_std)
+        self.fc_h_a = NoisyLinear(self.conv_output_size+128, args.hidden_size, std_init=args.noisy_std)
         self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
         self.fc_z_a = NoisyLinear(args.hidden_size,
                                   action_space * self.atoms,
@@ -229,15 +267,29 @@ class DQN(nn.Module):
 
     def forward(self, x, log=False):
 
-        if self.architecture == 'mlp_gcn':
-            x = F.relu(self.node_embed(x,extract_latent=False))
-            x = x.permute(0,2,3,1)
-            # x = x.view(x.shape[0],x.shape[1],-1) #Flatten everything. May need to rethink.
+        if self.architecture in 'cnn-data-efficient-gcn-ram': #['cnn-data-efficient-ram','cnn-data-efficient-no-ram']:
+            ram_state = x[:,:,:128].contiguous()
+            pixel_state = x[:,:,128:].view(-1,self.history_length, 84,84).contiguous()
 
-        x = self.convs(x)
 
-        if self.architecture in ['canonical', 'data-efficient']:
-            x = x.view(-1, self.conv_output_size)
+            x = self.convs(pixel_state).view(-1,self.conv_output_size)
+            entities = F.relu(self.node_embed(ram_state,extract_latent=False))
+            entities = entities.permute(0,2,3,1)
+            entities = self.entity_encoder(entities)
+ 
+            x = torch.cat((x,entities),-1)
+
+        else: 
+            if self.architecture == 'mlp_gcn':
+                x = F.relu(self.node_embed(x,extract_latent=False))
+                x = x.permute(0,2,3,1)
+                # x = x.view(x.shape[0],x.shape[1],-1) #Flatten everything. May need to rethink.
+
+            x = self.convs(x)
+
+            if self.architecture in ['canonical', 'data-efficient']:
+                x = x.view(-1, self.conv_output_size)
+
         v = self.fc_z_v(F.relu(self.fc_h_v(x)))  # Value stream
         a = self.fc_z_a(F.relu(self.fc_h_a(x)))  # Advantage stream
         v, a = v.view(-1, 1, self.atoms), a.view(-1, self.action_space, self.atoms)
