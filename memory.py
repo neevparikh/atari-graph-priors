@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
+import os 
+
 import numpy as np
 import torch
 from cpprb import PrioritizedReplayBuffer
@@ -12,6 +14,7 @@ class ReplayMemory():
         self.priority_weight = args.priority_weight  
         self.n = args.multi_step
         self.device = args.device
+        os.makedirs('memories/', exist_ok=True)
         self.buffer = PrioritizedReplayBuffer(
                 capacity,
                 {
@@ -33,6 +36,7 @@ class ReplayMemory():
                     "rew": "rew",
                     "next": "next_obs",
                     },
+                mmap_prefix='memories/mm',
                 alpha=args.priority_exponent,
                 # next_of="obs",
                 # stack_compress="obs",
