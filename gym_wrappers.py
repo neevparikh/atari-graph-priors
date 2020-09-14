@@ -298,7 +298,7 @@ class LazyFrames(object):
         return self._frames[i]
 
 class AtariPreprocessPixelInput():
-    def __init__(self, shape=(84, 84)): #Do we still want to do this?
+    def __init__(self, shape=(48, 48)): #Do we still want to do this?
         self.shape = shape
         self.transforms = T.Compose([
             T.ToPILImage(mode='YCbCr'),
@@ -336,7 +336,7 @@ class CombineRamPixel(gym.ObservationWrapper):
             low=0,
             high=255,
             shape=new_total_shape,
-            dtype=np.float32
+            dtype=np.uint8,
         )
 
     def combine_states(self,ram_state,pixel_state):

@@ -61,6 +61,9 @@ parser.add_argument('--V-max',
                     metavar='V',
                     help='Maximum of value distribution support')
 parser.add_argument('--model', type=str, metavar='PARAMS', help='Pretrained model (state dict)')
+parser.add_argument('--mmap', 
+                    action='store_true',
+                    help='Store buffer on disk')
 parser.add_argument('--memory-capacity',
                     type=int,
                     default=int(1e6),

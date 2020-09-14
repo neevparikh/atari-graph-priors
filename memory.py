@@ -14,7 +14,11 @@ class ReplayMemory():
         self.priority_weight = args.priority_weight  
         self.n = args.multi_step
         self.device = args.device
-        os.makedirs('memories/', exist_ok=True)
+        if args.mmap:
+            os.makedirs('memories/', exist_ok=True)
+            mmap_prefix = 'memories/mm'
+        else:
+            mmap_prefix = None
         self.buffer = PrioritizedReplayBuffer(
                 capacity,
                 {
@@ -36,7 +40,7 @@ class ReplayMemory():
                     "rew": "rew",
                     "next": "next_obs",
                     },
-                mmap_prefix='memories/mm',
+                mmap_prefix=mmap_prefix,
                 alpha=args.priority_exponent,
                 # next_of="obs",
                 # stack_compress="obs",
