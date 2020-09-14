@@ -257,13 +257,12 @@ class FrameStack(gym.Wrapper):
     
     def _get_ob(self):
         assert len(self.frames) == self.k
-        #ob = torch.as_tensor(np.stack(list(self.frames), axis=0), device=self.device)
+        # ob = torch.as_tensor(np.stack(list(self.frames), axis=0), device=self.device)
+        # if self.cast is not None:
+        #     ob = ob.to(dtype=self.cast)
+        # if self.scale: 
+        #     ob = ob.div_(255)
         ob = np.stack(list(self.frames), axis=0)
-
-        if self.cast is not None:
-            ob = ob.to(dtype=self.cast)
-        if self.scale: 
-            ob = ob.div_(255)
         return ob
 
 

@@ -117,9 +117,6 @@ else:
         if args.reward_clip > 0:
             reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
 
-        import pdb
-
-        pdb.set_trace()
         mem.append(state, next_state, action, reward, done)  # Append transition to memory
 
         # Train and test
