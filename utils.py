@@ -90,8 +90,10 @@ def reset_seeds(seed):
     random.seed(seed)
     np.random.seed(seed)
 
+
 def torchify(*args, device):
     return tuple(map(lambda t: torch.as_tensor(t[0], device=device, dtype=t[1]), args))
+
 
 def append_timestamp(string, fmt_string=None):
     now = datetime.now()
@@ -115,17 +117,14 @@ def make_atari(env, num_frames, device, action_stack=False):
     return env
 
 
-
 def make_atari_RAM(env, num_frames, device, action_stack=False):
     """ Wrap env in atari processed env """
-   
+
     env = CombineRamPixel(env)
     env = MaxAndSkipEnv(env, 4)
     env = FrameStack(env, num_frames, device)
     # env = TorchTensorObservation(env, device)
     return env
-
-
 
 
 def make_ari(env, device):

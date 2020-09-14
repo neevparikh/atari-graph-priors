@@ -22,7 +22,6 @@ print('Options')
 for k, v in vars(args).items():
     print(k + ': ' + str(v))
 
-
 results_dir = os.path.join('results', args.id)
 
 if not os.path.exists(results_dir):
@@ -38,6 +37,7 @@ if torch.cuda.is_available() and not args.disable_cuda:
     torch.backends.cudnn.enabled = args.enable_cudnn
 else:
     args.device = torch.device('cpu')
+
 
 # Simple ISO 8601 timestamped logger
 def log(st):

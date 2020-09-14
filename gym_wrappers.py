@@ -6,6 +6,7 @@ import torchvision.transforms as T
 import gym
 import cv2
 
+
 class IndexedObservation(gym.ObservationWrapper):
     """ 
     Description:
@@ -34,6 +35,7 @@ class IndexedObservation(gym.ObservationWrapper):
     def observation(self, observation):
         return observation[self.indices]
 
+
 class TorchTensorObservation(gym.ObservationWrapper):
     """
     Description:
@@ -52,6 +54,7 @@ class TorchTensorObservation(gym.ObservationWrapper):
 
     def observation(self, observation):
         return torch.from_numpy(observation).to(dtype=torch.float, device=self.device)
+
 
 # Adapted from https://github.com/openai/gym/blob/master/gym/wrappers/resize_observation.py
 class ResizeObservation(gym.ObservationWrapper):
@@ -219,8 +222,8 @@ class MaxAndSkipEnv(gym.Wrapper):
         max_frame = self._obs_buffer.max(axis=0)
         return max_frame, total_reward, done, info
 
-class FrameStack(gym.Wrapper):
 
+class FrameStack(gym.Wrapper):
     def __init__(self, env, k, device, cast=torch.float32, scale=True):
         """Stack k last frames.
         cast : torch dtype to cast to. If None, no cast
@@ -254,13 +257,13 @@ class FrameStack(gym.Wrapper):
         ob, reward, done, info = self.env.step(action)
         self.frames.append(ob)
         return self._get_ob(), reward, done, info
-    
+
     def _get_ob(self):
         assert len(self.frames) == self.k
         # ob = torch.as_tensor(np.stack(list(self.frames), axis=0), device=self.device)
         # if self.cast is not None:
         #     ob = ob.to(dtype=self.cast)
-        # if self.scale: 
+        # if self.scale:
         #     ob = ob.div_(255)
         ob = np.stack(list(self.frames), axis=0)
         return ob
@@ -297,8 +300,9 @@ class LazyFrames(object):
     def __getitem__(self, i):
         return self._frames[i]
 
+
 class AtariPreprocessPixelInput():
-    def __init__(self, shape=(48, 48)): #Do we still want to do this?
+    def __init__(self, shape=(48, 48)):  #Do we still want to do this?
         self.shape = shape
         self.transforms = T.Compose([
             T.ToPILImage(mode='YCbCr'),
@@ -312,9 +316,10 @@ class AtariPreprocessPixelInput():
             shape=self.shape,
             dtype=np.uint8,
         )
-   
+
     def get_state(self, rendered_pixel):
         return self.transforms(rendered_pixel)
+
 
 class CombineRamPixel(gym.ObservationWrapper):
     def __init__(self, env):
@@ -330,8 +335,8 @@ class CombineRamPixel(gym.ObservationWrapper):
 
         self.pixel_shape = self.pixel_wrap.observation_space.shape
         self.ram_shape = self.observation_space.shape
-        new_total_shape = (self.ram_shape[0]+self.pixel_shape[0]*self.pixel_shape[1],)
-        
+        new_total_shape = (self.ram_shape[0] + self.pixel_shape[0] * self.pixel_shape[1],)
+
         self.observation_space = gym.spaces.Box(
             low=0,
             high=255,
@@ -339,9 +344,9 @@ class CombineRamPixel(gym.ObservationWrapper):
             dtype=np.uint8,
         )
 
-    def combine_states(self,ram_state,pixel_state):
-         return np.concatenate((ram_state,np.reshape(pixel_state,-1)))
+    def combine_states(self, ram_state, pixel_state):
+        return np.concatenate((ram_state, np.reshape(pixel_state, -1)))
 
     def observation(self, obs):
         pixel_state = self.pixel_wrap.get_state(self.render(mode='rgb_array'))
-        return  self.combine_states(obs, pixel_state)
+        return self.combine_states(obs, pixel_state)

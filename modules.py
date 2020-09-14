@@ -9,6 +9,7 @@ from torch.nn.functional import tanh
 
 from utils import conv2d_size_out
 
+
 class Reshape(torch.nn.Module):
     """
     Description:
@@ -29,6 +30,7 @@ class Reshape(torch.nn.Module):
 
     def forward(self, x):
         return x.view(*self.shape)
+
 
 # Adapted from https://github.com/tkipf/pygcn.
 class GCN(torch.nn.Module):
