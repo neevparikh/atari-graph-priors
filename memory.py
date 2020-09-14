@@ -54,8 +54,9 @@ class ReplayMemory():
                         (np.squeeze(s['act'], 1), torch.long),
                         (np.squeeze(s['rew'], 1), torch.float32),
                         (s['next_obs'], torch.float32),
-                        (np.squeeze(s['done'], 1), torch.bool),
+                        (s['done'], torch.bool),
                         (s['weights'], torch.float32), device=self.device)
 
     def update_priorities(self, indexes, new_priorities):
+        indexes = indexes.cpu().numpy()
         self.buffer.update_priorities(indexes, new_priorities)
