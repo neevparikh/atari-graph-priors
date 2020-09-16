@@ -57,6 +57,7 @@ class Node_Embed(nn.Module):
 
 
     def forward(self,x,extract_latent=False):
+        
         scaled_key_input = self.one_hot_rep_template.repeat(x.shape[0],x.shape[1],1,1)*x[:,:,self.state_indices].unsqueeze(-1)
         
         one_hot_state_input_all = self.one_hot_state_input_template.repeat(x.shape[0],x.shape[1],1,1)

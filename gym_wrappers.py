@@ -298,7 +298,7 @@ class LazyFrames(object):
         return self._frames[i]
 
 class AtariPreprocessPixelInput():
-    def __init__(self, shape=(48, 48)): #Do we still want to do this?
+    def __init__(self, shape=(84, 84)): #Do we still want to do this?
         self.shape = shape
         self.transforms = T.Compose([
             T.ToPILImage(mode='YCbCr'),

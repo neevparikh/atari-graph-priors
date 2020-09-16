@@ -102,6 +102,7 @@ if args.evaluate:
     print('Avg. reward: ' + str(avg_reward))
 else:
     # Training loop
+    print("STARTING TRAINING")
     dqn.train()
     T, done = 0, True
     for T in trange(1, args.T_max + 1):
@@ -118,7 +119,7 @@ else:
             reward = max(min(reward, args.reward_clip), -args.reward_clip)  # Clip rewards
 
         mem.append(state, next_state, action, reward, done)  # Append transition to memory
-
+        
         # Train and test
         if T >= args.learn_start:
             mem.priority_weight = min(mem.priority_weight + priority_weight_increase,
