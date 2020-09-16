@@ -60,6 +60,8 @@ class DQN(nn.Module):
         self.action_space = action_space
         self.observation_space = env.observation_space
         self.env = env
+        self.reverse_graph = args.reverse_graph
+        print("REVERSING:",self.reverse_graph)
         self.env_str = args.env
         self.pixel_shape = self.env.pixel_shape
         self.ram_len = self.env.ram_shape[0]
@@ -147,6 +149,15 @@ class DQN(nn.Module):
                 entities_to_index, latent_entities, edge_list = self.get_demonattack_info()
             else:
                 raise ValueError("{} is not configured.".format(self.env_str))
+
+            if self.reverse_graph:
+                new_edge_list = []
+                for edge_type in edge_list:
+                    new_edge_list.append([])
+                    for edge in edge_type:
+                        new_edge_list[-1].append((edge[1],edge[0]))
+                edge_list = new_edge_list
+
 
 
             embed_size = 64
@@ -345,15 +356,16 @@ class DQN(nn.Module):
             x = torch.cat((x, entities), -1)
 
         else:
-            if self.architecture == 'mlp_gcn':
-                x = F.relu(self.node_embed(x, extract_latent=False))
-                x = x.permute(0, 2, 3, 1)
-                # x = x.view(x.shape[0],x.shape[1],-1) #Flatten everything. May need to rethink.
+            exit('bad config')
+            # if self.architecture == 'mlp_gcn':
+            #     x = F.relu(self.node_embed(x, extract_latent=False))
+            #     x = x.permute(0, 2, 3, 1)
+            #     # x = x.view(x.shape[0],x.shape[1],-1) #Flatten everything. May need to rethink.
 
-            x = self.convs(x)
+            # x = self.convs(x)
 
-            if self.architecture in ['canonical', 'data-efficient']:
-                x = x.view(-1, self.conv_output_size)
+            # if self.architecture in ['canonical', 'data-efficient']:
+            #     x = x.view(-1, self.conv_output_size)
 
         v = self.fc_z_v(F.relu(self.fc_h_v(x)))  # Value stream
         a = self.fc_z_a(F.relu(self.fc_h_a(x)))  # Advantage stream
