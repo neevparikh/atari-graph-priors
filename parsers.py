@@ -132,6 +132,9 @@ parser.add_argument('--enable-cudnn',
 parser.add_argument('--reverse_graph',
                     action='store_true',
                     help='Reverse graph in case of de-gcn-ram')
+parser.add_argument('--use_hier',
+                    action='store_true',
+                    help='Use hierarchical edges')
 parser.add_argument('--checkpoint-interval',
                     default=0,
                     help='How often to checkpoint the model, defaults to 0 (never checkpoint)')

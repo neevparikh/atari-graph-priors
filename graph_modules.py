@@ -137,16 +137,20 @@ class GCN(nn.Module):
         return result.view(list(x.shape[:-1]) + [y.shape[-1]])
 
     def forward(self, x):
+        # print(x.shape)
         for l in range(self.num_layers):
             layer_out = []
             for e in range(self.num_edges):
                 weighting = F.normalize(self.A[e].float(), dim=0)
 
                 layer_out.append(self.ND_2D_mm(x.transpose(3, 2), weighting).transpose(3, 2))
+                # print(layer_out[-1].shape)
+
             x = torch.cat([
                 self.activation(self.weights[e][l](type_features)) for e,
                 type_features in enumerate(layer_out)
             ],
-                          axis=1)
+                          axis=-1)
+            # print(x.shape)
         # x = self.final_mapping(x)
         return x
