@@ -140,8 +140,13 @@ class DQN(nn.Module):
                 entities_to_index, latent_entities, edge_list = self.get_berzerk_info()
             elif self.env_str == "Asteroids-ram-v0":
                 entities_to_index, latent_entities, edge_list = self.get_asteroids_info()
+            elif self.env_str == "Pong-ram-v0":
+                entities_to_index, latent_entities, edge_list = self.get_pong_info()
+            elif self.env_str == "DemonAttack-ram-v0":
+                entities_to_index, latent_entities, edge_list = self.get_demonattack_info()
             else:
                 raise ValueError("{} is not configured.".format(self.env_str))
+
 
             embed_size = 64
             final_embed_size = 64
@@ -271,6 +276,56 @@ class DQN(nn.Module):
             edge_type_0.append(("asteroids_y_{}".format(i), "asteroids_{}".format(i)))
 
         return asteroids_entities_to_index, asteroids_latent_entities, [edge_type_0]
+
+    def get_demonattack_info(self):
+        demonattack_entities_to_index = {
+           "level":62,
+            "player_x":22,
+            "enemy_x1":17,
+            "enemy_x2":18,
+            "enemy_x3":19,
+            "missile_y":21,
+            "enemy_y1":69,
+            "enemy_y2":70,
+            "enemy_y3":71,
+            "num_lives":114
+        }
+
+        demonattack_latent_entities = ["player", "game", "enemy_1", "enemy_2","enemy_3","missile"]
+
+        edge_type_0 = [("player_x", "player"), 
+        ("enemy_x1", "enemy_1"), ("enemy_y1", "enemy_1"),
+        ("enemy_x2", "enemy_2"), ("enemy_y2", "enemy_2"),
+        ("enemy_x3", "enemy_3"), ("enemy_y3", "enemy_2"),
+        ("num_lives", "game"), ("level", "game"),
+        ("missile_y", "missile")]
+
+        return demonattack_entities_to_index, demonattack_latent_entities, [edge_type_0]
+ 
+    def get_pong_info(self):
+        pong_entities_to_index = 
+        {
+         "player_y":51,
+         "player_x":46,
+         "enemy_y":50,
+         "enemy_x":45,
+         "ball_x":49,
+         "ball_y":54,
+         "enemy_score":13,
+         "player_score":14
+        }
+
+        pong_latent_entities = ["player", "game", "enemy", "ball"]
+
+    
+        edge_type_0 = [("player_x", "player"), ("player_y", "player"),
+                       ("ball_x", "ball"), ("ball_y", "ball"),
+                       ("enemy_x", "enemy"), ("enemy_y", "enemy"),
+                       ("enemy_score", "game"),
+                       ("player_score", "game")]
+
+        return pong_entities_to_index, pong_latent_entities, [edge_type_0]
+
 
     def forward(self, x, log=False):
 
