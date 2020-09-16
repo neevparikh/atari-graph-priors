@@ -101,6 +101,7 @@ class DQN(nn.Module):
 
         elif self.architecture == 'mlp-gcn':
 
+
             if self.env_str == "Berzerk-ram-v0":
                 entities_to_index, latent_entities, edge_list = self.get_berzerk_info()
             elif self.env_str == "Asteroids-ram-v0":
@@ -303,8 +304,7 @@ class DQN(nn.Module):
         return demonattack_entities_to_index, demonattack_latent_entities, [edge_type_0]
  
     def get_pong_info(self):
-        pong_entities_to_index = 
-        {
+        pong_entities_to_index = {
          "player_y":51,
          "player_x":46,
          "enemy_y":50,
