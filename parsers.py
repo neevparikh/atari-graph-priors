@@ -5,16 +5,9 @@ parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='default', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--env',
-                    type=str,
-                    default='Pong-v0',
-                    help='ATARI game')
-parser.add_argument('--ari',
-                    action='store_true',
-                    help='ARI features')
-parser.add_argument('--atari',
-                    action='store_true',
-                    help='ATARI preprocessing')
+parser.add_argument('--env', type=str, default='Pong-v0', help='ATARI game')
+parser.add_argument('--ari', action='store_true', help='ARI features')
+parser.add_argument('--atari', action='store_true', help='ATARI preprocessing')
 parser.add_argument('--T-max',
                     type=int,
                     default=int(50e6),
@@ -32,7 +25,7 @@ parser.add_argument('--history-length',
                     help='Number of consecutive states processed')
 parser.add_argument('--architecture',
                     type=str,
-                    default='canonical',
+                    default='de-gcn-ram',
                     metavar='ARCH',
                     help='Network architecture')
 parser.add_argument('--hidden-size',
@@ -61,9 +54,7 @@ parser.add_argument('--V-max',
                     metavar='V',
                     help='Maximum of value distribution support')
 parser.add_argument('--model', type=str, metavar='PARAMS', help='Pretrained model (state dict)')
-parser.add_argument('--mmap', 
-                    action='store_true',
-                    help='Store buffer on disk')
+parser.add_argument('--mmap', action='store_true', help='Store buffer on disk')
 parser.add_argument('--memory-capacity',
                     type=int,
                     default=int(1e6),
@@ -147,4 +138,3 @@ parser.add_argument(
     action='store_true',
     help=
     'Don\'t zip the memory file. Not recommended (zipping is a bit slower and much, much smaller)')
-
