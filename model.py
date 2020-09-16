@@ -80,6 +80,18 @@ class DQN(nn.Module):
             sz = conv2d_size_out(sz, (3, 3), 2)
             self.conv_output_size = sz[0] * sz[1] * 64
             # self.conv_output_size = 3136
+
+            self.fc_h_v = NoisyLinear(self.conv_output_size ,
+                                  args.hidden_size,
+                                  std_init=args.noisy_std)
+            self.fc_h_a = NoisyLinear(self.conv_output_size ,
+                                      args.hidden_size,
+                                      std_init=args.noisy_std)
+            self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
+            self.fc_z_a = NoisyLinear(args.hidden_size,
+                                      action_space * self.atoms,
+                                      std_init=args.noisy_std)
+
         elif self.architecture == 'data-efficient':
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
                                        nn.ReLU(),
@@ -91,6 +103,17 @@ class DQN(nn.Module):
             self.conv_output_size = sz[0] * sz[1] * 64
             # self.conv_output_size = 576
 
+            self.fc_h_v = NoisyLinear(self.conv_output_size ,
+                                  args.hidden_size,
+                                  std_init=args.noisy_std)
+            self.fc_h_a = NoisyLinear(self.conv_output_size ,
+                                      args.hidden_size,
+                                      std_init=args.noisy_std)
+            self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
+            self.fc_z_a = NoisyLinear(args.hidden_size,
+                                      action_space * self.atoms,
+                                      std_init=args.noisy_std)
+
         elif self.architecture == 'mlp':
 
             self.input_shape = self.observation_space.shape[1] * args.history_length
@@ -101,41 +124,55 @@ class DQN(nn.Module):
                                        nn.ReLU())
             self.conv_output_size = args.hidden_size
 
+            self.fc_h_v = NoisyLinear(self.conv_output_size,
+                                  args.hidden_size,
+                                  std_init=args.noisy_std)
+            self.fc_h_a = NoisyLinear(self.conv_output_size,
+                                      args.hidden_size,
+                                      std_init=args.noisy_std)
+            self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
+            self.fc_z_a = NoisyLinear(args.hidden_size,
+                                      action_space * self.atoms,
+                                      std_init=args.noisy_std)
+
         elif self.architecture == 'mlp-gcn':
+            exit("Deprecated")
 
 
-            if self.env_str == "Berzerk-ram-v0":
-                entities_to_index, latent_entities, edge_list = self.get_berzerk_info()
-            elif self.env_str == "Asteroids-ram-v0":
-                entities_to_index, latent_entities, edge_list = self.get_asteroids_info()
-            else:
-                raise ValueError("{} is not configured.".format(self.env_str))
+            # if self.env_str == "Berzerk-ram-v0":
+            #     entities_to_index, latent_entities, edge_list = self.get_berzerk_info()
+            # elif self.env_str == "Asteroids-ram-v0":
+            #     entities_to_index, latent_entities, edge_list = self.get_asteroids_info()
+            # else:
+            #     raise ValueError("{} is not configured.".format(self.env_str))
 
-            embed_size = 32
-            final_embed_size = 32
-            self.node_embed = Node_Embed(entities_to_index,
-                                         latent_entities=latent_entities,
-                                         edge_list=edge_list,
-                                         embed_size=embed_size,
-                                         out_embed_size=final_embed_size)
-            print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
+            # embed_size = 32
+            # final_embed_size = 32
+            # self.node_embed = Node_Embed(entities_to_index,
+            #                              latent_entities=latent_entities,
+            #                              edge_list=edge_list,
+            #                              embed_size=embed_size,
+            #                              out_embed_size=final_embed_size)
+            # print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
 
-            # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
-            num_entities = len(list(entities_to_index.keys()) + latent_entities)
-            #self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
+            # # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
+            # num_entities = len(list(entities_to_index.keys()) + latent_entities)
+            # #self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
 
-            self.convs = nn.Sequential(
-                nn.Conv2d(num_entities, 128, (final_embed_size, 2), stride=1, padding=0),
-                nn.ReLU(),
-                nn.Conv2d(128, 128, (1, 2), stride=1, padding=0),
-                Reshape(-1, 256),
-                nn.ReLU(),
-                nn.Linear(256, 512),
-                nn.ReLU())
-            #self.convs(image); gcn(ram)
-            # 46*4*8
+            # self.convs = nn.Sequential(
+            #     nn.Conv2d(num_entities, 128, (final_embed_size, 2), stride=1, padding=0),
+            #     nn.ReLU(),
+            #     nn.Conv2d(128, 128, (1, 2), stride=1, padding=0),
+            #     Reshape(-1, 256),
+            #     nn.ReLU(),
+            #     nn.Linear(256, 512),
+            #     nn.ReLU())
+            # #self.convs(image); gcn(ram)
+            # # 46*4*8
 
-            self.conv_output_size = 512
+            # self.conv_output_size = 512
+
+
 
         elif self.architecture == 'de-gcn-ram':
 
@@ -189,18 +226,20 @@ class DQN(nn.Module):
             sz = conv2d_size_out(sz, (5, 5), 5)
             self.conv_output_size = sz[0] * sz[1] * 64
 
+            self.fc_h_v = NoisyLinear(self.conv_output_size + 128,
+                                  args.hidden_size,
+                                  std_init=args.noisy_std)
+            self.fc_h_a = NoisyLinear(self.conv_output_size + 128,
+                                      args.hidden_size,
+                                      std_init=args.noisy_std)
+            self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
+            self.fc_z_a = NoisyLinear(args.hidden_size,
+                                      action_space * self.atoms,
+                                      std_init=args.noisy_std)
+
         else:
             raise ValueError("architecture not recognized: {}".format(args.architecture))
-        self.fc_h_v = NoisyLinear(self.conv_output_size + 128,
-                                  args.hidden_size,
-                                  std_init=args.noisy_std)
-        self.fc_h_a = NoisyLinear(self.conv_output_size + 128,
-                                  args.hidden_size,
-                                  std_init=args.noisy_std)
-        self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
-        self.fc_z_a = NoisyLinear(args.hidden_size,
-                                  action_space * self.atoms,
-                                  std_init=args.noisy_std)
+        
 
         print("All param:", sum([param.numel() for param in self.parameters()]))
 
@@ -340,11 +379,13 @@ class DQN(nn.Module):
 
     def forward(self, x, log=False):
 
-        if self.architecture == 'de-gcn-ram':
-            ram_state = x[:, :, :self.ram_len].contiguous()
-            pixel_state = x[:, :, self.ram_len:].view(-1, self.history_length,
+        ram_state = x[:, :, :self.ram_len].contiguous()
+        pixel_state = x[:, :, self.ram_len:].view(-1, self.history_length,
                                                       *self.pixel_shape).contiguous()
 
+
+        if self.architecture == 'de-gcn-ram':
+           
             x = self.convs(pixel_state).view(-1, self.conv_output_size)
 
             #bs,4,num entities,embed_size
@@ -356,16 +397,13 @@ class DQN(nn.Module):
             x = torch.cat((x, entities), -1)
 
         else:
-            exit('bad config')
-            # if self.architecture == 'mlp_gcn':
-            #     x = F.relu(self.node_embed(x, extract_latent=False))
-            #     x = x.permute(0, 2, 3, 1)
-            #     # x = x.view(x.shape[0],x.shape[1],-1) #Flatten everything. May need to rethink.
+            if self.architecture == 'mlp_gcn':
+                exit('bad config')
 
-            # x = self.convs(x)
+            x = self.convs(pixel_state)
 
-            # if self.architecture in ['canonical', 'data-efficient']:
-            #     x = x.view(-1, self.conv_output_size)
+            if self.architecture in ['canonical', 'data-efficient']:
+                x = x.view(-1, self.conv_output_size)
 
         v = self.fc_z_v(F.relu(self.fc_h_v(x)))  # Value stream
         a = self.fc_z_a(F.relu(self.fc_h_a(x)))  # Advantage stream
