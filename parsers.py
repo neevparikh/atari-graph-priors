@@ -57,7 +57,7 @@ parser.add_argument('--model', type=str, metavar='PARAMS', help='Pretrained mode
 parser.add_argument('--mmap', action='store_true', help='Store buffer on disk')
 parser.add_argument('--memory-capacity',
                     type=int,
-                    default=int(1e6),
+                    default=int(5e5), #int(1e6),
                     metavar='CAPACITY',
                     help='Experience replay memory capacity')
 parser.add_argument('--replay-frequency',
