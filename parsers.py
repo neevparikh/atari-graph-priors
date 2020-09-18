@@ -10,7 +10,7 @@ parser.add_argument('--ari', action='store_true', help='ARI features')
 parser.add_argument('--atari', action='store_true', help='ATARI preprocessing')
 parser.add_argument('--T-max',
                     type=int,
-                    default=1e6, #int(50e6),
+                    default=int(1e6), #int(50e6),
                     metavar='STEPS',
                     help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length',
