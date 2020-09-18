@@ -10,7 +10,7 @@ parser.add_argument('--ari', action='store_true', help='ARI features')
 parser.add_argument('--atari', action='store_true', help='ATARI preprocessing')
 parser.add_argument('--T-max',
                     type=int,
-                    default=int(50e6),
+                    default=1e6, #int(50e6),
                     metavar='STEPS',
                     help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length',
@@ -30,7 +30,7 @@ parser.add_argument('--architecture',
                     help='Network architecture')
 parser.add_argument('--hidden-size',
                     type=int,
-                    default=512,
+                    default=256, #512,
                     metavar='SIZE',
                     help='Network hidden size')
 parser.add_argument('--noisy-std',
@@ -62,7 +62,7 @@ parser.add_argument('--memory-capacity',
                     help='Experience replay memory capacity')
 parser.add_argument('--replay-frequency',
                     type=int,
-                    default=4,
+                    default=1, #4,
                     metavar='k',
                     help='Frequency of sampling from memory')
 parser.add_argument('--priority-exponent',
@@ -77,13 +77,13 @@ parser.add_argument('--priority-weight',
                     help='Initial prioritised experience replay importance sampling weight')
 parser.add_argument('--multi-step',
                     type=int,
-                    default=3,
+                    default=20, #3,
                     metavar='n',
                     help='Number of steps for multi-step return')
 parser.add_argument('--discount', type=float, default=0.99, metavar='γ', help='Discount factor')
 parser.add_argument('--target-update',
                     type=int,
-                    default=int(8e3),
+                    default=2000, #int(8e3),
                     metavar='τ',
                     help='Number of steps after which to update target network')
 parser.add_argument('--reward-clip',
@@ -93,7 +93,7 @@ parser.add_argument('--reward-clip',
                     help='Reward clipping (0 to disable)')
 parser.add_argument('--learning-rate',
                     type=float,
-                    default=0.0000625,
+                    default=0.0001, #0.0000625,
                     metavar='η',
                     help='Learning rate')
 parser.add_argument('--adam-eps', type=float, default=1.5e-4, metavar='ε', help='Adam epsilon')
@@ -105,13 +105,13 @@ parser.add_argument('--norm-clip',
                     help='Max L2 norm for gradient clipping')
 parser.add_argument('--learn-start',
                     type=int,
-                    default=int(20e3),
+                    default=1600, #int(20e3),
                     metavar='STEPS',
                     help='Number of steps before starting training')
 parser.add_argument('--evaluate', action='store_true', help='Evaluate only')
 parser.add_argument('--evaluation-interval',
                     type=int,
-                    default=100000,
+                    default=20000, #100000,
                     metavar='STEPS',
                     help='Number of training steps between evaluations')
 parser.add_argument('--evaluation-episodes',
