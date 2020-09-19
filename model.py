@@ -8,6 +8,9 @@ from torch.nn import functional as F
 from modules import Reshape
 from graph_modules import Node_Embed
 from utils import conv2d_size_out
+# import os
+# os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+# import matplotlib.pyplot as plt
 
 
 # Factorised NoisyLinear layer with bias
@@ -216,7 +219,7 @@ class DQN(nn.Module):
                 nn.Conv2d(num_entities, 64, (final_embed_size, 2), stride=1, padding=0),
                 nn.ReLU(),
                 Reshape(-1, 192),
-                nn.Linear(192,128),
+                nn.Linear(384,128),
 
                 # nn.Conv2d(128, 64, (1, 2), stride=1, padding=0),
 
@@ -416,7 +419,15 @@ class DQN(nn.Module):
 
         ram_state = x[:, :, :self.ram_len].contiguous()
         pixel_state = x[:, :, self.ram_len:].view(-1, self.history_length,
-                                                      *self.pixel_shape).contiguous()
+                                                      *self.pixel_shape).contiguous() / 255.0
+
+
+        # print(torch.sum(pixel_state[0]))
+        # print(pixel_state.shape)
+        
+        # plt.imshow(pixel_state[0][-1])
+        # plt.show()
+        # exit()
 
 
         if self.architecture == 'de-gcn-ram':
