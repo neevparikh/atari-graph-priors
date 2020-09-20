@@ -120,9 +120,13 @@ def make_atari(env, num_frames, device, action_stack=False):
 def make_atari_RAM(env, num_frames, device, action_stack=False):
     """ Wrap env in atari processed env """
 
+    # env.env.frame_skip = (0,1)
+    #exit()
+
     env = CombineRamPixel(env)
     env = MaxAndSkipEnv(env, 4)
     env = FrameStack(env, num_frames, device)
+    env.reset()
     # env = TorchTensorObservation(env, device)
     return env
 
@@ -150,7 +154,7 @@ def get_wrapped_env(env_string, wrapper_func, **kwargs):
     env = gym.make(env_string)
     test_env = gym.make(env_string)
     env.reset()
-    test_env.reset()
+    # test_env.reset()
     env = wrapper_func(env, **kwargs)
     test_env = wrapper_func(test_env, **kwargs)
     return env, test_env

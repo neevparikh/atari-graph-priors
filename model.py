@@ -8,10 +8,11 @@ from torch.nn import functional as F
 from modules import Reshape
 from graph_modules import Node_Embed
 from utils import conv2d_size_out
-# import os
+import os
 # os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 # import matplotlib.pyplot as plt
 
+# counter = 0
 
 # Factorised NoisyLinear layer with bias
 class NoisyLinear(nn.Module):
@@ -185,7 +186,7 @@ class DQN(nn.Module):
                 entities_to_index, latent_entities, edge_list = self.get_asteroids_info(args.use_hier)
             elif self.env_str == "Pong-ram-v0":
                 entities_to_index, latent_entities, edge_list = self.get_pong_info()
-            elif self.env_str == "DemonAttack-ram-v0":
+            elif self.env_str == "DemonAttack-ramNoFrameskip-v4":
                 entities_to_index, latent_entities, edge_list = self.get_demonattack_info(args.use_hier)
             else:
                 raise ValueError("{} is not configured.".format(self.env_str))
@@ -202,8 +203,8 @@ class DQN(nn.Module):
 
 
 
-            embed_size = 64
-            final_embed_size = 64
+            embed_size = 32
+            final_embed_size = 32
             self.node_embed = Node_Embed(entities_to_index,
                                          latent_entities=latent_entities,
                                          edge_list=edge_list,
@@ -216,13 +217,12 @@ class DQN(nn.Module):
             #self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
 
             self.entity_encoder = nn.Sequential(
-                nn.Conv2d(num_entities, 64, (final_embed_size, 2), stride=1, padding=0),
-                nn.ReLU(),
-                Reshape(-1, 192),
-                nn.Linear(384,128),
-
+                nn.Conv2d(num_entities, 128, (final_embed_size, 1), stride=1, padding=0),
+                # nn.ReLU(),
+                # nn.Conv2d(num_entities, 64, (1, 2), stride=1, padding=0),
+                Reshape(-1, 512),
+                nn.Linear(512,128),
                 # nn.Conv2d(128, 64, (1, 2), stride=1, padding=0),
-
                 nn.ReLU())
 
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
@@ -418,16 +418,32 @@ class DQN(nn.Module):
     def forward(self, x, log=False):
 
         ram_state = x[:, :, :self.ram_len].contiguous()
-        pixel_state = x[:, :, self.ram_len:].view(-1, self.history_length,
-                                                      *self.pixel_shape).contiguous() / 255.0
+        pixel_state = x[:, :, self.ram_len:].reshape(-1, self.history_length,
+                                                      *self.pixel_shape).contiguous().div(255)
+
+        # print(pixel_state[0][-1][20:50])
 
 
+        # for x in range(len(pixel_state[0][-1])):
+        #     print(pixel_state[0][-1][x])
         # print(torch.sum(pixel_state[0]))
         # print(pixel_state.shape)
+
+        # if len(pixel_state) == 1:
+        #     plt.imshow(pixel_state[0][-1])
+        #     plt.show()
+
         
-        # plt.imshow(pixel_state[0][-1])
-        # plt.show()
-        # exit()
+            # global counter
+
+            # if counter < 25:
+
+            #     for frame in range(self.history_length):
+
+            #         plt.imshow(pixel_state[0][frame])
+            #         plt.savefig("frames_hist/{}-{}.png".format(counter,frame))
+
+            #     counter+=1
 
 
         if self.architecture == 'de-gcn-ram':

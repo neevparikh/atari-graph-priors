@@ -316,6 +316,11 @@ class AtariPreprocessPixelInput():
             shape=self.shape,
             dtype=np.uint8,
         )
+    # def transforms(self,state):
+    #     rgb_weights = [0.2989, 0.5870, 0.1140]
+    #     grayscale_image = np.dot(state[...,:3], rgb_weights)
+    #     state = cv2.resize(state, (84, 84), interpolation=cv2.INTER_LINEAR)
+    #     return state #torch.tensor(state, dtype=torch.float32, device=self.device).div_(255)
 
     def get_state(self, rendered_pixel):
         return self.transforms(rendered_pixel)
@@ -326,6 +331,8 @@ class CombineRamPixel(gym.ObservationWrapper):
         super().__init__(env)
 
         self.env = env
+        # self.env.reset()
+        # self.env.render("rgb_array")
 
         # get_pixel_name = env.unwrapped.spec.id
         # self.pixel_env = gym.make(get_pixel_name.replace('-ram',''))
@@ -344,7 +351,12 @@ class CombineRamPixel(gym.ObservationWrapper):
             dtype=np.uint8,
         )
 
+
+
     def combine_states(self, ram_state, pixel_state):
+        # for x in range(len(pixel_state)):
+        #     print(pixel_state[x])
+
         return np.concatenate((ram_state, np.reshape(pixel_state, -1)))
 
     def observation(self, obs):
