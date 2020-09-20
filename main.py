@@ -96,7 +96,7 @@ priority_weight_increase = (1 - args.priority_weight) / (args.T_max - args.learn
 #     state = next_state
 #     T += 1
 
-starting = 100
+# starting = 100
 if args.evaluate:
     dqn.eval()  # Set DQN (online network) to evaluation mode
     avg_reward = test(args, test_env, 0, dqn, metrics, results_dir, evaluate=True)  # Test
@@ -110,14 +110,14 @@ else:
         # env.render()
         if done:
             state, done = env.reset(), False
-            starting = starting
-            print("RESTART")
+            # starting = starting
+            # print("RESTART")
 
             mem.buffer.on_episode_end()
 
-        if starting > 0:
-            starting-=1
-            env.render()
+        # if starting > 0:
+        #     starting-=1
+        #     env.render()
 
         if T % args.replay_frequency == 0:
             dqn.reset_noise()  # Draw a new set of noisy weights
