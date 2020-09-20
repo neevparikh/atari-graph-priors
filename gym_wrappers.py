@@ -205,7 +205,7 @@ class MaxAndSkipEnv(gym.Wrapper):
         self.max_frames = max_frames
 
     def reset(self, **kwargs):
-        self.episode_steps 
+        self.episode_steps = 0
         return self.env.reset(**kwargs)
 
     def step(self, action):

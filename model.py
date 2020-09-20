@@ -180,11 +180,11 @@ class DQN(nn.Module):
 
         elif self.architecture == 'de-gcn-ram':
 
-            if self.env_str == "Berzerk-ram-v0":
+            if self.env_str == "Berzerk-ramNoFrameskip-v4":
                 entities_to_index, latent_entities, edge_list = self.get_berzerk_info(args.use_hier)
-            elif self.env_str == "Asteroids-ram-v0":
+            elif self.env_str == "Asteroids-ramNoFrameskip-v4":
                 entities_to_index, latent_entities, edge_list = self.get_asteroids_info(args.use_hier)
-            elif self.env_str == "Pong-ram-v0":
+            elif self.env_str == "Pong-ramNoFrameskip-v4":
                 entities_to_index, latent_entities, edge_list = self.get_pong_info()
             elif self.env_str == "DemonAttack-ramNoFrameskip-v4":
                 entities_to_index, latent_entities, edge_list = self.get_demonattack_info(args.use_hier)
