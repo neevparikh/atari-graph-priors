@@ -124,7 +124,7 @@ def make_atari_RAM(env, num_frames, device, action_stack=False):
     #exit()
 
     env = CombineRamPixel(env)
-    env = MaxAndSkipEnv(env, 4)
+    env = MaxAndSkipEnv(env, 4, int(108e3))
     env = FrameStack(env, num_frames, device)
     env.reset()
     # env = TorchTensorObservation(env, device)

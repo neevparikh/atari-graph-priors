@@ -196,12 +196,13 @@ class MaxAndSkipEnv(gym.Wrapper):
     Notes:
         - N/A
     """
-    def __init__(self, env, skip=4):
+    def __init__(self, env, skip=4, max_frames=int(108e3)):
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
         self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
         self._skip = skip
         self.episode_steps = 0
+        self.max_frames = max_frames
 
     def reset(self, **kwargs):
         self.episode_steps 
@@ -223,7 +224,7 @@ class MaxAndSkipEnv(gym.Wrapper):
         # Note that the observation on the done=True frame
         # doesn't matter
         max_frame = self._obs_buffer.max(axis=0)
-        return max_frame, total_reward, done or self.episode_steps >= int(108e3), info
+        return max_frame, total_reward, done or self.episode_steps >= self.max_frames, info
 
 
 class FrameStack(gym.Wrapper):
