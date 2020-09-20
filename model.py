@@ -430,20 +430,20 @@ class DQN(nn.Module):
         # print(pixel_state.shape)
 
         # if len(pixel_state) == 1:
-        #     plt.imshow(pixel_state[0][-1])
-        #     plt.show()
+        # #     plt.imshow(pixel_state[0][-1])
+        # #     plt.show()
 
         
-            # global counter
+        #     global counter
 
-            # if counter < 25:
+        #     if counter < 25:
 
-            #     for frame in range(self.history_length):
+        #         for frame in range(self.history_length):
 
-            #         plt.imshow(pixel_state[0][frame])
-            #         plt.savefig("frames_hist/{}-{}.png".format(counter,frame))
+        #             plt.imshow(pixel_state[0][frame])
+        #             plt.savefig("frames_hist_fixed/{}-{}.png".format(counter,frame))
 
-            #     counter+=1
+        #         counter+=1
 
 
         if self.architecture == 'de-gcn-ram':

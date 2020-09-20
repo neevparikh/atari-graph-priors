@@ -201,8 +201,10 @@ class MaxAndSkipEnv(gym.Wrapper):
         # most recent raw observations (for max pooling across time steps)
         self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
         self._skip = skip
+        self.episode_steps = 0
 
     def reset(self, **kwargs):
+        self.episode_steps 
         return self.env.reset(**kwargs)
 
     def step(self, action):
@@ -217,10 +219,11 @@ class MaxAndSkipEnv(gym.Wrapper):
             total_reward += reward
             if done:
                 break
+            self.episode_steps+=1
         # Note that the observation on the done=True frame
         # doesn't matter
         max_frame = self._obs_buffer.max(axis=0)
-        return max_frame, total_reward, done, info
+        return max_frame, total_reward, done or self.episode_steps >= int(108e3), info
 
 
 class FrameStack(gym.Wrapper):
@@ -330,7 +333,9 @@ class CombineRamPixel(gym.ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
 
-        self.env = env
+        # self.env = env
+        # print(self.env.env.__dict__)
+        # exit()
         # self.env.reset()
         # self.env.render("rgb_array")
 
