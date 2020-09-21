@@ -5,6 +5,7 @@ import numpy as np
 import torchvision.transforms as T
 import gym
 import cv2
+import random
 
 
 class IndexedObservation(gym.ObservationWrapper):
@@ -196,24 +197,28 @@ class MaxAndSkipEnv(gym.Wrapper):
     Notes:
         - N/A
     """
-    def __init__(self, env, skip=4, max_frames=int(108e3)):
+    def __init__(self, env, skip=4):
         gym.Wrapper.__init__(self, env)
         # most recent raw observations (for max pooling across time steps)
         self._obs_buffer = np.zeros((2,) + env.observation_space.shape, dtype=np.uint8)
         self._skip = skip
-        self.episode_steps = 0
-        self.max_frames = max_frames
 
     def reset(self, **kwargs):
-        self.episode_steps = 0
         return self.env.reset(**kwargs)
 
     def step(self, action):
+
+        # np.save("FIRST_FRAME.npy",self.env.render('rgb_array'))
+        # if self.episode_steps > self.max_frames - 1000:
+        #     print(self.episode_steps )
+
         total_reward = 0.0
         done = None
         for i in range(self._skip):
+
             obs, reward, done, info = self.env.step(action)
-            self.episode_steps+=1
+            # np.save("SECOND_FRAME.npy",self.env.render('rgb_array'))
+            # exit()
             if i == self._skip - 2:
                 self._obs_buffer[0] = obs
             if i == self._skip - 1:
@@ -225,7 +230,43 @@ class MaxAndSkipEnv(gym.Wrapper):
         # Note that the observation on the done=True frame
         # doesn't matter
         max_frame = self._obs_buffer.max(axis=0)
-        return max_frame, total_reward, done or self.episode_steps > self.max_frames, info
+        return max_frame, total_reward, done, info
+
+
+class AtariSkips(gym.Wrapper):
+    def __init__(self, env, max_frames=int(108e3)):
+        gym.Wrapper.__init__(self, env)
+        self.env = env
+        self.episode_steps = 0
+        self.max_frames = max_frames
+
+    def reset(self):
+        ob = self.env.reset()
+        self.episode_steps = 0
+
+        for _ in range(random.randrange(30)):
+            ob, reward, done, info = self.env.step(0)
+            self.episode_steps+=1
+
+            if done:
+                ob = self.env.reset()
+
+        return ob
+
+    def step(self, action):
+        ob, reward, done, info = self.env.step(action)
+        self.episode_steps+=1
+
+        #Should we add noop after death?
+        return ob, reward, done or self.episode_steps > self.max_frames, info
+
+
+
+
+
+
+
+   
 
 
 class FrameStack(gym.Wrapper):
@@ -254,6 +295,7 @@ class FrameStack(gym.Wrapper):
 
     def reset(self):
         ob = self.env.reset()
+
         for _ in range(self.k):
             self.frames.append(ob)
         return self._get_ob()
@@ -272,7 +314,6 @@ class FrameStack(gym.Wrapper):
         #     ob = ob.div_(255)
         ob = np.stack(list(self.frames), axis=0)
         return ob
-
 
 class LazyFrames(object):
     """

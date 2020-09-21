@@ -13,7 +13,7 @@ from atariari.benchmark.wrapper import AtariARIWrapper
 
 from gym_wrappers import AtariPreprocess, MaxAndSkipEnv, FrameStack, ResetARI, \
         ObservationDictToInfo, ResizeObservation, IndexedObservation, TorchTensorObservation, \
-         CombineRamPixel
+         CombineRamPixel, AtariSkips
 
 ## DQN utils ##
 
@@ -125,8 +125,8 @@ def make_atari_RAM(env, num_frames, device, action_stack=False,max_frames=int(10
 
     print("MAX FRAMES:",max_frames)
 
-    env = CombineRamPixel(env)
-    env = MaxAndSkipEnv(env, 4, max_frames)
+    env = AtariSkips(CombineRamPixel(env),max_frames)
+    env = MaxAndSkipEnv(env, 4)
     env = FrameStack(env, num_frames, device)
     env.reset()
     # env = TorchTensorObservation(env, device)
