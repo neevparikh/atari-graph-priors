@@ -117,14 +117,16 @@ def make_atari(env, num_frames, device, action_stack=False):
     return env
 
 
-def make_atari_RAM(env, num_frames, device, action_stack=False):
+def make_atari_RAM(env, num_frames, device, action_stack=False,max_frames=int(108e3)):
     """ Wrap env in atari processed env """
 
     # env.env.frame_skip = (0,1)
     #exit()
 
+    print("MAX FRAMES:",max_frames)
+
     env = CombineRamPixel(env)
-    env = MaxAndSkipEnv(env, 4, int(108e3))
+    env = MaxAndSkipEnv(env, 4, max_frames)
     env = FrameStack(env, num_frames, device)
     env.reset()
     # env = TorchTensorObservation(env, device)
@@ -168,7 +170,7 @@ def initialize_environment(args):
     #else:
     #    env, test_env = get_wrapped_env(args.env, make_default, num_frames=args.history_length, device=args.device)
     else:
-        env, test_env = get_wrapped_env(args.env, make_atari_RAM, num_frames=args.history_length, device=args.device)
+        env, test_env = get_wrapped_env(args.env, make_atari_RAM, num_frames=args.history_length, device=args.device, max_frames=args.max_episode_length)
 
     env.reset()
     test_env.reset()
