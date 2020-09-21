@@ -213,6 +213,7 @@ class MaxAndSkipEnv(gym.Wrapper):
         done = None
         for i in range(self._skip):
             obs, reward, done, info = self.env.step(action)
+            self.episode_steps+=1
             if i == self._skip - 2:
                 self._obs_buffer[0] = obs
             if i == self._skip - 1:
@@ -220,11 +221,11 @@ class MaxAndSkipEnv(gym.Wrapper):
             total_reward += reward
             if done:
                 break
-        self.episode_steps+=1
+            
         # Note that the observation on the done=True frame
         # doesn't matter
         max_frame = self._obs_buffer.max(axis=0)
-        return max_frame, total_reward, done or self.episode_steps >= self.max_frames, info
+        return max_frame, total_reward, done or self.episode_steps > self.max_frames, info
 
 
 class FrameStack(gym.Wrapper):
