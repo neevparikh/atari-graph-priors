@@ -1,0 +1,1 @@
+slurmstepd: error: *** JOB 14844451 ON gpu1207 CANCELLED AT 2020-09-23T07:17:58 ***

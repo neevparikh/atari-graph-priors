@@ -182,13 +182,13 @@ class DQN(nn.Module):
         elif self.architecture == 'de-gcn-ram':
 
             if self.env_str == "Berzerk-ramNoFrameskip-v4":
-                entities_to_index, latent_entities, edge_list = self.get_berzerk_info(args.use_hier)
+                entities_to_index, latent_entities, edge_list = self.get_berzerk_info(args.use_hier,args.use_relational)
             elif self.env_str == "Asteroids-ramNoFrameskip-v4":
-                entities_to_index, latent_entities, edge_list = self.get_asteroids_info(args.use_hier)
+                entities_to_index, latent_entities, edge_list = self.get_asteroids_info(args.use_hier,args.use_relational)
             elif self.env_str == "Pong-ramNoFrameskip-v4":
                 entities_to_index, latent_entities, edge_list = self.get_pong_info()
             elif self.env_str == "DemonAttack-ramNoFrameskip-v4":
-                entities_to_index, latent_entities, edge_list = self.get_demonattack_info(args.use_hier)
+                entities_to_index, latent_entities, edge_list = self.get_demonattack_info(args.use_hier,args.use_relational)
             else:
                 raise ValueError("{} is not configured.".format(self.env_str))
 
@@ -252,7 +252,7 @@ class DQN(nn.Module):
 
         print("All param:", sum([param.numel() for param in self.parameters()]))
 
-    def get_berzerk_info(self,use_hier=False):
+    def get_berzerk_info(self,use_hier=False,relational_edges=False):
         berzerk_entities_to_index = {
             "player_x": 19,
             "player_y": 11,
@@ -307,9 +307,23 @@ class DQN(nn.Module):
 
             edges.append(edge_type_1)
 
+        if relational_edges:
+            edge_type_2 = []
+
+            for i, _ in enumerate(range(65, 73)):
+                edge_type_2.append(("enemy_robot_{}".format(i),"player"))
+                edge_type_2.append(("player_missile","enemy_robot_{}".format(i)))
+
+            edge_type_2.append(("evilOtto","player"))
+            edge_type_2.append(("player_missile","evilOtto"))
+
+
+            edges.append(edge_type_2)
+
+
         return berzerk_entities_to_index, berzerk_latent_entities, edges
 
-    def get_asteroids_info(self,use_hier=False):
+    def get_asteroids_info(self,use_hier=False,relational_edges=False):
         asteroids_entities_to_index = {
             "player_x": 73,
             "player_y": 74,
@@ -357,10 +371,22 @@ class DQN(nn.Module):
 
             edges.append(edge_type_1)
 
+        if relational_edges:
+            edge_type_2 = []
+
+            for i in range(len(asteroids_x)):
+                edge_type_2.append(("asteroids_{}".format(i),"player"))
+                edge_type_2.append(("player_missile1","asteroids_{}".format(i)))
+                edge_type_2.append(("player_missile2","asteroids_{}".format(i)))
+
+
+            edges.append(edge_type_2)
+
+
 
         return asteroids_entities_to_index, asteroids_latent_entities, edges
 
-    def get_demonattack_info(self,use_hier=False):
+    def get_demonattack_info(self,use_hier=False,relational_edges=False):
         demonattack_entities_to_index = {
            "level":62,
             "player_x":22,
@@ -388,6 +414,11 @@ class DQN(nn.Module):
         if use_hier:
             demonattack_latent_entities.append("enemy")
             edges.append([("enemy_1","enemy"),("enemy_2","enemy"),("enemy_3","enemy")])
+
+        if relational_edges:
+            edges.append([("enemy_1","player"),("enemy_2","player"),("enemy_3","player"),("missile","enemy_1"),("missile","enemy_2"),("missile","enemy_3")])
+
+ 
 
         return demonattack_entities_to_index, demonattack_latent_entities, edges
  

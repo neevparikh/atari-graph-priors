@@ -59,6 +59,9 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 parser.add_argument('--reverse_graph',
                     action='store_true',
                     help='Reverse graph in case of de-gcn-ram')
+parser.add_argument('--use_relational',
+                    action='store_true',
+                    help='Use relational edges in case of de-gcn-ram')
 parser.add_argument('--use_hier',
                     action='store_true',
                     help='Use hierarchical edges')
