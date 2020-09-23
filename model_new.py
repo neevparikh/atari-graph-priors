@@ -8,6 +8,8 @@ from torch.nn import functional as F
 from graph_modules import Node_Embed
 from utils import conv2d_size_out
 import os
+
+from modules import Reshape
 # os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 # import matplotlib.pyplot as plt
 

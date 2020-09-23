@@ -13,7 +13,7 @@ class Env():
     self.device = args.device
     self.env = gym.make(args.env)
     self.env.seed(args.seed)
-    print(self.env.__dict__)
+    # print(self.env.__dict__)
     self.env._max_episode_steps = args.max_episode_length
     # self.ale = atari_py.ALEInterface()
     # self.ale.setInt('random_seed', args.seed)
