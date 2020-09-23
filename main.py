@@ -12,7 +12,7 @@ import torch
 from tqdm import trange
 
 from agent import Agent
-from env import Env
+from env_new import Env
 from memory import ReplayMemory
 from test import test
 
@@ -22,11 +22,11 @@ parser = argparse.ArgumentParser(description='Rainbow')
 parser.add_argument('--id', type=str, default='default', help='Experiment ID')
 parser.add_argument('--seed', type=int, default=123, help='Random seed')
 parser.add_argument('--disable-cuda', action='store_true', help='Disable CUDA')
-parser.add_argument('--game', type=str, default='space_invaders', choices=atari_py.list_games(), help='ATARI game')
+# parser.add_argument('--game', type=str, default='space_invaders', choices=atari_py.list_games(), help='ATARI game')
 parser.add_argument('--T-max', type=int, default=int(50e6), metavar='STEPS', help='Number of training steps (4x number of frames)')
 parser.add_argument('--max-episode-length', type=int, default=int(108e3), metavar='LENGTH', help='Max episode length in game frames (0 to disable)')
 parser.add_argument('--history-length', type=int, default=4, metavar='T', help='Number of consecutive states processed')
-parser.add_argument('--architecture', type=str, default='canonical', choices=['canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
+parser.add_argument('--architecture', type=str, default='data-efficient', choices=['de-gcn-ram','canonical', 'data-efficient'], metavar='ARCH', help='Network architecture')
 parser.add_argument('--hidden-size', type=int, default=512, metavar='SIZE', help='Network hidden size')
 parser.add_argument('--noisy-std', type=float, default=0.1, metavar='σ', help='Initial standard deviation of noisy linear layers')
 parser.add_argument('--atoms', type=int, default=51, metavar='C', help='Discretised size of value distribution')
@@ -56,6 +56,14 @@ parser.add_argument('--enable-cudnn', action='store_true', help='Enable cuDNN (f
 parser.add_argument('--checkpoint-interval', default=0, help='How often to checkpoint the model, defaults to 0 (never checkpoint)')
 parser.add_argument('--memory', help='Path to save/load the memory from')
 parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t zip the memory file. Not recommended (zipping is a bit slower and much, much smaller)')
+parser.add_argument('--reverse_graph',
+                    action='store_true',
+                    help='Reverse graph in case of de-gcn-ram')
+parser.add_argument('--use_hier',
+                    action='store_true',
+                    help='Use hierarchical edges')
+parser.add_argument('--env', type=str, default="DemonAttack-ramNoFrameskip-v4", help='ATARI game')
+
 
 # Setup
 args = parser.parse_args()
@@ -130,6 +138,8 @@ while T < args.evaluation_size:
   if done:
     state, done = env.reset(), False
 
+
+
   next_state, _, done = env.step(np.random.randint(0, action_space))
   val_mem.append(state, -1, 0.0, done)
   state = next_state
@@ -143,10 +153,15 @@ else:
   # Training loop
   dqn.train()
   T, done = 0, True
+
   for T in trange(1, args.T_max + 1):
+    # env.render()
     if done:
+
       state, done = env.reset(), False
 
+    # if T > 4000:
+    #   env.render()
     if T % args.replay_frequency == 0:
       dqn.reset_noise()  # Draw a new set of noisy weights
 

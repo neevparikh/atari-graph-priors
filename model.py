@@ -5,6 +5,10 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+import matplotlib.pyplot as plt
+
 
 # Factorised NoisyLinear layer with bias
 class NoisyLinear(nn.Module):
@@ -46,11 +50,14 @@ class NoisyLinear(nn.Module):
       return F.linear(input, self.weight_mu, self.bias_mu)
 
 
+# counter = 0
+
 class DQN(nn.Module):
   def __init__(self, args, action_space):
     super(DQN, self).__init__()
     self.atoms = args.atoms
     self.action_space = action_space
+    self.history_length = args.history_length
 
     if args.architecture == 'canonical':
       self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 8, stride=4, padding=0), nn.ReLU(),
@@ -67,6 +74,22 @@ class DQN(nn.Module):
     self.fc_z_a = NoisyLinear(args.hidden_size, action_space * self.atoms, std_init=args.noisy_std)
 
   def forward(self, x, log=False):
+    # print(torch.sum(x[0]))
+
+    # print(x.shape)
+    
+    # if len(x) == 1:
+    #   global counter
+
+    #   if counter < 25:
+
+    #     for frame in range(4):
+          # plt.imshow(x[0][-1])
+          # plt.show()
+          # plt.savefig("frames_hist/{}-{}.png".format(counter,frame))
+    #     counter+=1
+    # exit()
+    x = x.view(-1,self.history_length,84,84)
     x = self.convs(x)
     x = x.view(-1, self.conv_output_size)
     v = self.fc_z_v(F.relu(self.fc_h_v(x)))  # Value stream

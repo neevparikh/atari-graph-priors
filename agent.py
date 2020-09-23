@@ -6,7 +6,7 @@ import torch
 from torch import optim
 from torch.nn.utils import clip_grad_norm_
 
-from model import DQN
+from model_new import DQN
 
 
 class Agent():
@@ -22,7 +22,9 @@ class Agent():
     self.discount = args.discount
     self.norm_clip = args.norm_clip
 
-    self.online_net = DQN(args, self.action_space).to(device=args.device)
+    print(args)
+
+    self.online_net = DQN(args, self.action_space,env).to(device=args.device)
     if args.model:  # Load pretrained model if provided
       if os.path.isfile(args.model):
         state_dict = torch.load(args.model, map_location='cpu')  # Always load tensors onto CPU by default, will shift to GPU if necessary
@@ -37,7 +39,7 @@ class Agent():
 
     self.online_net.train()
 
-    self.target_net = DQN(args, self.action_space).to(device=args.device)
+    self.target_net = DQN(args, self.action_space,env).to(device=args.device)
     self.update_target_net()
     self.target_net.train()
     for param in self.target_net.parameters():
