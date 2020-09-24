@@ -71,6 +71,8 @@ parser.add_argument('--env', type=str, default="DemonAttack-ramNoFrameskip-v4", 
 # Setup
 args = parser.parse_args()
 
+args.id = "-".join([str(args.architecture),str(args.seed),str(args.use_hier),str(args.use_relational),str(args.reverse_graph)])
+
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
   print(' ' * 26 + k + ': ' + str(v))
