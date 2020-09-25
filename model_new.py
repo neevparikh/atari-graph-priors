@@ -66,6 +66,7 @@ class DQN(nn.Module):
         self.observation_space = env.observation_space
         self.env = env
         self.reverse_graph = args.reverse_graph
+        self.nogcn = args.nogcn
         print("REVERSING:",self.reverse_graph)
         self.env_str = args.env
         self.pixel_shape = (84,84) #self.env.pixel_shape
@@ -181,50 +182,62 @@ class DQN(nn.Module):
 
         elif self.architecture == 'de-gcn-ram':
 
-            if self.env_str == "Berzerk-ramNoFrameskip-v4":
-                entities_to_index, latent_entities, edge_list = self.get_berzerk_info(args.use_hier,args.use_relational)
-            elif self.env_str == "Asteroids-ramNoFrameskip-v4":
-                entities_to_index, latent_entities, edge_list = self.get_asteroids_info(args.use_hier,args.use_relational)
-            elif self.env_str == "Pong-ramNoFrameskip-v4":
-                entities_to_index, latent_entities, edge_list = self.get_pong_info()
-            elif self.env_str == "DemonAttack-ramNoFrameskip-v4":
-                entities_to_index, latent_entities, edge_list = self.get_demonattack_info(args.use_hier,args.use_relational)
+            if not self.nogcn:
+
+                if self.env_str == "Berzerk-ramNoFrameskip-v4":
+                    entities_to_index, latent_entities, edge_list = self.get_berzerk_info(args.use_hier,args.use_relational)
+                elif self.env_str == "Asteroids-ramNoFrameskip-v4":
+                    entities_to_index, latent_entities, edge_list = self.get_asteroids_info(args.use_hier,args.use_relational)
+                elif self.env_str == "Pong-ramNoFrameskip-v4":
+                    entities_to_index, latent_entities, edge_list = self.get_pong_info()
+                elif self.env_str == "DemonAttack-ramNoFrameskip-v4":
+                    entities_to_index, latent_entities, edge_list = self.get_demonattack_info(args.use_hier,args.use_relational)
+                else:
+                    raise ValueError("{} is not configured.".format(self.env_str))
+
+                if self.reverse_graph:
+                    new_edge_list = []
+                    for edge_type in edge_list:
+                        new_edge_list.append([])
+                        for edge in edge_type:
+                            new_edge_list[-1].append((edge[1],edge[0]))
+                    edge_list = new_edge_list
+
+                print("EDGES:",edge_list)
+
+
+
+                embed_size = 36
+                final_embed_size = 36
+               
+
+                # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
+                num_entities = len(list(entities_to_index.keys()) + latent_entities)
+            #self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
+
+            if self.nogcn:
+                self.entity_encoder = nn.Sequential(
+                    Reshape(-1, 512),
+                    nn.Linear(512,128),
+                    nn.ReLU())
+
             else:
-                raise ValueError("{} is not configured.".format(self.env_str))
-
-            if self.reverse_graph:
-                new_edge_list = []
-                for edge_type in edge_list:
-                    new_edge_list.append([])
-                    for edge in edge_type:
-                        new_edge_list[-1].append((edge[1],edge[0]))
-                edge_list = new_edge_list
-
-            print("EDGES:",edge_list)
-
-
-
-            embed_size = 36
-            final_embed_size = 36
-            self.node_embed = Node_Embed(entities_to_index,
+                self.node_embed = Node_Embed(entities_to_index,
                                          latent_entities=latent_entities,
                                          edge_list=edge_list,
                                          embed_size=embed_size,
                                          out_embed_size=final_embed_size)
-            print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
+                 
+                print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
+                self.entity_encoder = nn.Sequential(
+                    nn.Conv2d(num_entities, 128, (final_embed_size, 1), stride=1, padding=0),
+                    # nn.ReLU(),
+                    # nn.Conv2d(num_entities, 64, (1, 2), stride=1, padding=0),
+                    Reshape(-1, 512),
+                    nn.Linear(512,128),
+                    # nn.Conv2d(128, 64, (1, 2), stride=1, padding=0),
+                    nn.ReLU())
 
-            # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
-            num_entities = len(list(entities_to_index.keys()) + latent_entities)
-            #self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
-
-            self.entity_encoder = nn.Sequential(
-                nn.Conv2d(num_entities, 128, (final_embed_size, 1), stride=1, padding=0),
-                # nn.ReLU(),
-                # nn.Conv2d(num_entities, 64, (1, 2), stride=1, padding=0),
-                Reshape(-1, 512),
-                nn.Linear(512,128),
-                # nn.Conv2d(128, 64, (1, 2), stride=1, padding=0),
-                nn.ReLU())
 
             self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
                                        nn.ReLU(),
@@ -479,13 +492,16 @@ class DQN(nn.Module):
 
 
         if self.architecture == 'de-gcn-ram':
-           
+            
             x = self.convs(pixel_state).view(-1, self.conv_output_size)
 
             #bs,4,num entities,embed_size
-            entities = F.relu(self.node_embed(ram_state, extract_latent=False))
-            #bs,num entities,embed_size,4
-            entities = entities.permute(0, 2, 3, 1).contiguous()
+            if not self.nogcn:
+               entities = F.relu(self.node_embed(ram_state, extract_latent=False))
+               #bs,num entities,embed_size,4
+               entities = entities.permute(0, 2, 3, 1).contiguous()
+            else:
+                entities = ram_state
             entities = self.entity_encoder(entities)
 
             x = torch.cat((x, entities), -1)
