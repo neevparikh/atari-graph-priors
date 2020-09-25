@@ -59,6 +59,9 @@ parser.add_argument('--disable-bzip-memory', action='store_true', help='Don\'t z
 parser.add_argument('--reverse_graph',
                     action='store_true',
                     help='Reverse graph in case of de-gcn-ram')
+parser.add_argument('--nogcn',
+                    action='store_true',
+                    help='just use ram state')
 parser.add_argument('--use_relational',
                     action='store_true',
                     help='Use relational edges in case of de-gcn-ram')
@@ -71,11 +74,9 @@ parser.add_argument('--env', type=str, default="DemonAttack-ramNoFrameskip-v4", 
 # Setup
 args = parser.parse_args()
 
-from datetime import datetime
-now = datetime.now()
-current_time = now.strftime("%H:%M:%S")
+import time
 
-args.id = "-".join([current_time,str(args.env),str(args.architecture),str(args.seed),str(args.use_hier),str(args.use_relational),str(args.reverse_graph)])
+args.id = "-".join([str(time.time()),str(args.env),str(args.architecture),str(args.seed),str(args.use_hier),str(args.use_relational),str(args.reverse_graph)])
 
 print(' ' * 26 + 'Options')
 for k, v in vars(args).items():
