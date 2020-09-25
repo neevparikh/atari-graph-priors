@@ -204,8 +204,8 @@ class DQN(nn.Module):
 
 
 
-            embed_size = 32
-            final_embed_size = 32
+            embed_size = 36
+            final_embed_size = 36
             self.node_embed = Node_Embed(entities_to_index,
                                          latent_entities=latent_entities,
                                          edge_list=edge_list,
