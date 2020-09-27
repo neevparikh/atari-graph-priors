@@ -62,6 +62,9 @@ parser.add_argument('--reverse_graph',
 parser.add_argument('--mini',
                     action='store_true',
                     help='use smaller de-gcn-ram-obj variant')
+parser.add_argument('--big_emb',
+                    action='store_true',
+                    help='use 64 sized embs (only for de-gcn-ram-obj)')
 parser.add_argument('--nogcn',
                     action='store_true',
                     help='just use ram state')
@@ -71,6 +74,9 @@ parser.add_argument('--use_relational',
 parser.add_argument('--use_hier',
                     action='store_true',
                     help='Use hierarchical edges')
+parser.add_argument('--disconnect_obj',
+                    action='store_true',
+                    help='Disconnect objects for de-gcn-ram-obj')
 parser.add_argument('--env', type=str, default="DemonAttack-ramNoFrameskip-v4", help='ATARI game')
 
 

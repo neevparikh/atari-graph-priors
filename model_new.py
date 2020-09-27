@@ -227,7 +227,7 @@ class DQN(nn.Module):
                                          latent_entities=latent_entities,
                                          edge_list=edge_list,
                                          embed_size=embed_size,
-                                         out_embed_size=final_embed_size)
+                                         out_embed_size=final_embed_size,device=args.device)
                  
                 print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
                 self.entity_encoder = nn.Sequential(
@@ -286,9 +286,12 @@ class DQN(nn.Module):
                 print("EDGES:",edge_list)
 
 
-
-                embed_size = 16
-                final_embed_size = 16
+                if args.big_emb:
+                  embed_size = 64
+                  final_embed_size = 32
+                else:
+                  embed_size = 16
+                  final_embed_size = 16
                
 
                 # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
@@ -307,7 +310,9 @@ class DQN(nn.Module):
                                          edge_list=edge_list,
                                          object_list=object_list,
                                          embed_size=embed_size,
-                                         out_embed_size=final_embed_size)
+                                         out_embed_size=final_embed_size,
+                                         disconnect_graph=args.disconnect_obj,
+                                         args.device=args.device)
                  
                 print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
 

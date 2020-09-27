@@ -91,6 +91,7 @@ class Object_Embed(nn.Module):
                  object_list,
                  embed_size,
                  out_embed_size,
+                 disconnect_graph = False,
                  device=0):
         super(Object_Embed, self).__init__()
 
@@ -122,9 +123,11 @@ class Object_Embed(nn.Module):
         for edge_type in range(len(edge_list)):
             for i in range(len(all_nodes)):
                 self.adjacency[edge_type][i][i] = 1
-            for s, d in edge_list[edge_type]:
-                self.adjacency[edge_type][self.node_to_index[s]][self.node_to_index[d]] = 1
-
+            if not disconnect_graph:
+                for s, d in edge_list[edge_type]:
+                    self.adjacency[edge_type][self.node_to_index[s]][self.node_to_index[d]] = 1
+            else:
+                print("Disconnected graph")
         self.gcn = GCN(self.adjacency,
                        emb_size=embed_size,
                        use_layers=3,
