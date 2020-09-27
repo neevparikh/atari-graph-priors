@@ -312,7 +312,7 @@ class DQN(nn.Module):
                                          embed_size=embed_size,
                                          out_embed_size=final_embed_size,
                                          disconnect_graph=args.disconnect_obj,
-                                         args.device=args.device)
+                                         device=args.device)
                  
                 print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
 
