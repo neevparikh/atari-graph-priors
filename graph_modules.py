@@ -83,6 +83,104 @@ class Node_Embed(nn.Module):
 
         return output
 
+class Object_Embed(nn.Module):
+    def __init__(self,
+                 variables_to_index,
+                 non_object_entities,
+                 edge_list,
+                 object_list,
+                 embed_size,
+                 out_embed_size,
+                 device=0):
+        super(Object_Embed, self).__init__()
+
+
+        self.object_list = object_list
+        self.x_indices = [variables_to_index[o+"_x"] if o+"_x" in variables_to_index else 128 for o in self.object_list]
+        self.y_indices = [variables_to_index[o+"_y"] if o+"_y" in variables_to_index else 128 for o in self.object_list]
+
+        all_nodes = self.object_list + non_object_entities
+
+        print(all_nodes)
+        print(self.object_list)
+        print(edge_list)
+
+        self.node_to_index = {}
+        for node_index, node in enumerate(all_nodes):
+            self.node_to_index[node] = node_index
+
+        self.all_object_indices = torch.arange(len(all_nodes)).unsqueeze(0).unsqueeze(0).to(device)
+        self.num_objects = len(self.object_list)
+
+        self.node_embedding = nn.Embedding(len(all_nodes),embed_size-2).to(device)
+        self.xy_placeholder = torch.zeros(1,1,len(all_nodes),2).to(device)
+
+        self.adjacency = torch.zeros(len(edge_list),
+                                     len(all_nodes),
+                                     len(all_nodes),
+                                     dtype=torch.uint8).to(device)
+        for edge_type in range(len(edge_list)):
+            for i in range(len(all_nodes)):
+                self.adjacency[edge_type][i][i] = 1
+            for s, d in edge_list[edge_type]:
+                self.adjacency[edge_type][self.node_to_index[s]][self.node_to_index[d]] = 1
+
+        self.gcn = GCN(self.adjacency,
+                       emb_size=embed_size,
+                       use_layers=3,
+                       activation="relu",
+                       device=device)
+
+        self.final_projection = torch.nn.Linear(embed_size, out_embed_size).to(device)
+        self.lifting_layer = nn.Linear(embed_size, embed_size).to(device)
+
+        self.device = device
+      
+
+    def forward(self, x, extract_latent=False):
+
+        x = torch.cat((x,torch.zeros(x.shape[0], x.shape[1],1).to(self.device)),-1)
+
+
+        # print(self.all_object_indices.shape)
+
+        embeddings = self.node_embedding(self.all_object_indices.repeat(
+            x.shape[0], x.shape[1], 1))
+
+        # print(embeddings.shape)
+
+        xy_info = self.xy_placeholder.repeat(
+            x.shape[0], x.shape[1], 1,1)
+
+        # print(xy_info.shape)
+
+        # print(x[:, :, self.x_indices].shape)
+
+        # print(xy_info[:,:,:self.num_objects,0].shape,x[:, :, self.x_indices].shape)
+        # exit()
+
+        xy_info[:,:,:self.num_objects,0] += x[:, :, self.x_indices]
+        xy_info[:,:,:self.num_objects,1] += x[:, :, self.y_indices]
+
+        embedded_nodes = torch.cat((embeddings,xy_info),-1)
+
+        # print(embedded_nodes[0][0][:,-5:])
+        # print(self.x_indices)
+        # print(xy_info[0][0])
+
+        # exit()
+
+        output = self.gcn(self.lifting_layer(embedded_nodes))
+
+        if extract_latent:
+            output = output[:, :, self.latent_node_indices]
+
+        output = self.final_projection(output)
+
+        # print("GCN Output:",output.shape)
+
+        return output
+
 
 # Adapted from https://github.com/tkipf/pygcn.
 class GCN(nn.Module):

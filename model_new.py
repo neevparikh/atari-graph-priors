@@ -5,7 +5,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from graph_modules import Node_Embed
+from graph_modules import Node_Embed,Object_Embed
 from utils import conv2d_size_out
 import os
 
@@ -65,6 +65,7 @@ class DQN(nn.Module):
         self.action_space = action_space
         self.observation_space = env.observation_space
         self.env = env
+        self.mini = args.mini
         self.reverse_graph = args.reverse_graph
         self.nogcn = args.nogcn
         print("REVERSING:",self.reverse_graph)
@@ -259,13 +260,107 @@ class DQN(nn.Module):
                                       action_space * self.atoms,
                                       std_init=args.noisy_std)
 
+        elif self.architecture == 'de-gcn-ram-obj':
+
+            if not self.nogcn:
+
+                if self.env_str == "Berzerk-ramNoFrameskip-v4":
+                    entities_to_index, non_object_entities, edge_list,object_list = self.get_berzerk_info(args.use_hier,args.use_relational,use_objects=True)
+                # elif self.env_str == "Asteroids-ramNoFrameskip-v4":
+                #     entities_to_index, latent_entities, edge_list = self.get_asteroids_info(args.use_hier,args.use_relational)
+                # elif self.env_str == "Pong-ramNoFrameskip-v4":
+                #     entities_to_index, latent_entities, edge_list = self.get_pong_info()
+                elif self.env_str == "DemonAttack-ramNoFrameskip-v4":
+                    entities_to_index, non_object_entities, edge_list,object_list = self.get_demonattack_info(args.use_hier,args.use_relational,use_objects=True)
+                else:
+                    raise ValueError("{} is not configured.".format(self.env_str))
+
+                if self.reverse_graph:
+                    new_edge_list = []
+                    for edge_type in edge_list:
+                        new_edge_list.append([])
+                        for edge in edge_type:
+                            new_edge_list[-1].append((edge[1],edge[0]))
+                    edge_list = new_edge_list
+
+                print("EDGES:",edge_list)
+
+
+
+                embed_size = 16
+                final_embed_size = 16
+               
+
+                # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
+                num_entities = len(object_list + non_object_entities)
+            #self.input_shape = args.history_length*num_entities*final_embed_size #self.observation_space.shape[1] * args.history_length
+
+            if self.nogcn:
+                self.entity_encoder = nn.Sequential(
+                    Reshape(-1, 512),
+                    nn.Linear(512,128),
+                    nn.ReLU())
+
+            else:
+                self.node_embed = Object_Embed(entities_to_index,
+                                         non_object_entities=non_object_entities,
+                                         edge_list=edge_list,
+                                         object_list=object_list,
+                                         embed_size=embed_size,
+                                         out_embed_size=final_embed_size)
+                 
+                print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
+
+
+                if self.mini:
+                    self.entity_encoder = nn.Sequential(
+                    nn.Conv2d(num_entities, 64, (final_embed_size, 2), stride=1, padding=0),
+                    nn.ReLU(),
+                    Reshape(-1, 192),
+                    nn.Linear(192,128),
+                    # nn.Conv2d(128, 64, (1, 2), stride=1, padding=0),
+                    nn.ReLU())
+
+
+                else:
+
+                    self.entity_encoder = nn.Sequential(
+                        nn.Conv2d(num_entities, 128, (final_embed_size, 1), stride=1, padding=0),
+                        nn.ReLU(),
+                        # nn.Conv2d(num_entities, 64, (1, 2), stride=1, padding=0),
+                        Reshape(-1, 512),
+                        nn.Linear(512,128),
+                        # nn.Conv2d(128, 64, (1, 2), stride=1, padding=0),
+                        nn.ReLU())
+
+
+            self.convs = nn.Sequential(nn.Conv2d(args.history_length, 32, 5, stride=5, padding=0),
+                                       nn.ReLU(),
+                                       nn.Conv2d(32, 64, 5, stride=5, padding=0),
+                                       nn.ReLU())
+
+            sz = conv2d_size_out(self.pixel_shape, (5, 5), 5)
+            sz = conv2d_size_out(sz, (5, 5), 5)
+            self.conv_output_size = sz[0] * sz[1] * 64
+
+            self.fc_h_v = NoisyLinear(self.conv_output_size + 128,
+                                  args.hidden_size,
+                                  std_init=args.noisy_std)
+            self.fc_h_a = NoisyLinear(self.conv_output_size + 128,
+                                      args.hidden_size,
+                                      std_init=args.noisy_std)
+            self.fc_z_v = NoisyLinear(args.hidden_size, self.atoms, std_init=args.noisy_std)
+            self.fc_z_a = NoisyLinear(args.hidden_size,
+                                      action_space * self.atoms,
+                                      std_init=args.noisy_std)
+
         else:
             raise ValueError("architecture not recognized: {}".format(args.architecture))
         
 
         print("All param:", sum([param.numel() for param in self.parameters()]))
 
-    def get_berzerk_info(self,use_hier=False,relational_edges=False):
+    def get_berzerk_info(self,use_hier=False,relational_edges=False,use_objects=False):
         berzerk_entities_to_index = {
             "player_x": 19,
             "player_y": 11,
@@ -283,36 +378,50 @@ class DQN(nn.Module):
             "enemy_evilOtto_y": 89
         }
 
-        berzerk_latent_entities = ["player", "game", "evilOtto", "player_missile", "robot_missile"]
 
-        edge_type_0 = [("player_x", "player"), ("player_y", "player"), ("player_direction",
-                                                                        "player"),
-                       ("num_lives", "game"), ("game_level", "game"), ("player_y", "player"),
-                       ("robots_killed_count", "game"), ("enemy_evilOtto_x", "evilOtto"),
-                       ("enemy_evilOtto_y", "evilOtto"), ("player_missile_x", "player_missile"),
-                       ("player_missile_y", "player_missile"), ("robot_missile_x", "robot_missile"),
-                       ("robot_missile_y", "robot_missile")]
+
+        edge_type_0 = [("player_x", "player"), ("player_y", "player"), ("player_direction", "player"),
+                           ("num_lives", "game"), ("game_level", "game"), ("player_y", "player"),
+                           ("robots_killed_count", "game"), ("enemy_evilOtto_x", "enemy_evilOtto"),
+                           ("enemy_evilOtto_y", "enemy_evilOtto"), ("player_missile_x", "player_missile"),
+                           ("player_missile_y", "player_missile"), ("robot_missile_x", "robot_missile"),
+                           ("robot_missile_y", "robot_missile")]
+        
+        if not use_objects:
+            berzerk_latent_entities = ["player", "game", "enemy_evilOtto", "player_missile", "robot_missile"]
+        else:
+            berzerk_latent_entities = ["player", "enemy_evilOtto", "player_missile", "robot_missile"]
+            non_object_entities = []
+            
 
         for i, value in enumerate(range(65, 73)):
-            berzerk_entities_to_index["enemy_robots_x_{}".format(i)] = value
+            berzerk_entities_to_index["enemy_robot_{}_x".format(i)] = value
             berzerk_latent_entities.append("enemy_robot_{}".format(i))
-            edge_type_0.append(("enemy_robots_x_{}".format(i), "enemy_robot_{}".format(i)))
+            edge_type_0.append(("enemy_robot_{}_x".format(i), "enemy_robot_{}".format(i)))
 
         for i, value in enumerate(range(56, 64)):  #Seems like bug in their berzerk code, y != x
 
             #for i,value in enumerate(range(56, 65)):#Seems like bug in their berzerk code, y != x
 
-            berzerk_entities_to_index["enemy_robots_y_{}".format(i)] = value
-            edge_type_0.append(("enemy_robots_y_{}".format(i), "enemy_robot_{}".format(i)))
+            berzerk_entities_to_index["enemy_robot_{}_y".format(i)] = value
+            edge_type_0.append(("enemy_robot_{}_y".format(i), "enemy_robot_{}".format(i)))
 
         for i, value in enumerate(range(93, 96)):
             berzerk_entities_to_index["player_score_{}".format(i)] = value
             edge_type_0.append(("player_score_{}".format(i), "game"))
 
-        edges = [edge_type_0]
+        
+        if not use_objects:
+           edges = [edge_type_0]
+        else:
+            edges = []
 
         if use_hier:
-            berzerk_latent_entities.append("robot")
+            if use_objects:
+                non_object_entities.append("robot")
+            else:
+               berzerk_latent_entities.append("robot")
+
             edge_type_1 = []
 
             for i, _ in enumerate(range(65, 73)):
@@ -327,14 +436,18 @@ class DQN(nn.Module):
                 edge_type_2.append(("enemy_robot_{}".format(i),"player"))
                 edge_type_2.append(("player_missile","enemy_robot_{}".format(i)))
 
-            edge_type_2.append(("evilOtto","player"))
-            edge_type_2.append(("player_missile","evilOtto"))
+            edge_type_2.append(("enemy_evilOtto","player"))
+            edge_type_2.append(("player_missile","enemy_evilOtto"))
+            edge_type_2.append(("robot_missile","player"))
 
 
             edges.append(edge_type_2)
 
+        if use_objects:
+            return berzerk_entities_to_index, non_object_entities, edges, berzerk_latent_entities
 
-        return berzerk_entities_to_index, berzerk_latent_entities, edges
+        else:
+            return berzerk_entities_to_index, berzerk_latent_entities, edges
 
     def get_asteroids_info(self,use_hier=False,relational_edges=False):
         asteroids_entities_to_index = {
@@ -399,41 +512,53 @@ class DQN(nn.Module):
 
         return asteroids_entities_to_index, asteroids_latent_entities, edges
 
-    def get_demonattack_info(self,use_hier=False,relational_edges=False):
+    def get_demonattack_info(self,use_hier=False,relational_edges=False,use_objects=False):
         demonattack_entities_to_index = {
            "level":62,
             "player_x":22,
-            "enemy_x1":17,
-            "enemy_x2":18,
-            "enemy_x3":19,
+            "enemy_1_x":17,
+            "enemy_2_x":18,
+            "enemy_3_x":19,
             "missile_y":21,
-            "enemy_y1":69,
-            "enemy_y2":70,
-            "enemy_y3":71,
+            "enemy_1_y":69,
+            "enemy_2_y":70,
+            "enemy_3_y":71,
             "num_lives":114
         }
 
         demonattack_latent_entities = ["player", "game", "enemy_1", "enemy_2","enemy_3","missile"]
 
         edge_type_0 = [("player_x", "player"), 
-        ("enemy_x1", "enemy_1"), ("enemy_y1", "enemy_1"),
-        ("enemy_x2", "enemy_2"), ("enemy_y2", "enemy_2"),
-        ("enemy_x3", "enemy_3"), ("enemy_y3", "enemy_3"),
+        ("enemy_1_x", "enemy_1"), ("enemy_1_y", "enemy_1"),
+        ("enemy_2_x", "enemy_2"), ("enemy_2_y", "enemy_2"),
+        ("enemy_3_x", "enemy_3"), ("enemy_3_y", "enemy_3"),
         ("num_lives", "game"), ("level", "game"),
         ("missile_y", "missile")]
 
-        edges = [edge_type_0]
+
+        if not use_objects:
+          edges = [edge_type_0]
+        else: 
+           edges = []
+           non_object_entities = []
 
         if use_hier:
-            demonattack_latent_entities.append("enemy")
+            if not use_objects:
+               demonattack_latent_entities.append("enemy")
+            else:
+                non_object_entities.append("enemy")
+
             edges.append([("enemy_1","enemy"),("enemy_2","enemy"),("enemy_3","enemy")])
 
         if relational_edges:
             edges.append([("enemy_1","player"),("enemy_2","player"),("enemy_3","player"),("missile","enemy_1"),("missile","enemy_2"),("missile","enemy_3")])
 
  
+        if use_objects:
+            return demonattack_entities_to_index, non_object_entities, edges, ["player", "enemy_1", "enemy_2", "enemy_3","missile"]
 
-        return demonattack_entities_to_index, demonattack_latent_entities, edges
+        else:
+            return demonattack_entities_to_index, demonattack_latent_entities, edges
  
     def get_pong_info(self):
         pong_entities_to_index = {
@@ -491,7 +616,7 @@ class DQN(nn.Module):
         #         counter+=1
 
 
-        if self.architecture == 'de-gcn-ram':
+        if self.architecture == 'de-gcn-ram' or self.architecture == 'de-gcn-ram-obj':
             
             x = self.convs(pixel_state).view(-1, self.conv_output_size)
 
