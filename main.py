@@ -77,6 +77,9 @@ parser.add_argument('--use_hier',
 parser.add_argument('--disconnect_obj',
                     action='store_true',
                     help='Disconnect objects for de-gcn-ram-obj')
+parser.add_argument('--separate_reflexive',
+                    action='store_true',
+                    help='Handle reflexive edges separately')
 parser.add_argument('--env', type=str, default="DemonAttack-ramNoFrameskip-v4", help='ATARI game')
 
 

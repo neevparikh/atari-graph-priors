@@ -92,6 +92,7 @@ class Object_Embed(nn.Module):
                  embed_size,
                  out_embed_size,
                  disconnect_graph = False,
+                 separate_reflexive = False,
                  device=0):
         super(Object_Embed, self).__init__()
 
@@ -116,13 +117,26 @@ class Object_Embed(nn.Module):
         self.node_embedding = nn.Embedding(len(all_nodes),embed_size-2).to(device)
         self.xy_placeholder = torch.zeros(1,1,len(all_nodes),2).to(device)
 
-        self.adjacency = torch.zeros(len(edge_list),
+        if separate_reflexive:
+            self.adjacency = torch.zeros(len(edge_list)+1,
+                                     len(all_nodes),
+                                     len(all_nodes),
+                                     dtype=torch.uint8).to(device)
+        
+            for i in range(len(all_nodes)):
+                    self.adjacency[-1][i][i] = 1
+        else:
+            
+
+            self.adjacency = torch.zeros(len(edge_list),
                                      len(all_nodes),
                                      len(all_nodes),
                                      dtype=torch.uint8).to(device)
         for edge_type in range(len(edge_list)):
-            for i in range(len(all_nodes)):
-                self.adjacency[edge_type][i][i] = 1
+            if not separate_reflexive:
+                print("adding reflexice edges")
+                for i in range(len(all_nodes)):
+                    self.adjacency[edge_type][i][i] = 1
             if not disconnect_graph:
                 for s, d in edge_list[edge_type]:
                     self.adjacency[edge_type][self.node_to_index[s]][self.node_to_index[d]] = 1

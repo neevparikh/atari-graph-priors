@@ -289,9 +289,15 @@ class DQN(nn.Module):
                 if args.big_emb:
                   embed_size = 64
                   final_embed_size = 32
+                  
                 else:
-                  embed_size = 16
-                  final_embed_size = 16
+                  if args.separate_reflexive:
+                      embed_size = 24
+                      final_embed_size = 24
+                  else:
+
+                      embed_size = 16
+                      final_embed_size = 16
                
 
                 # self.input_shape = args.history_length*len(list(berzerk_entities_to_index.keys())+berzerk_latent_entities)*embed_size #self.observation_space.shape[1] * args.history_length
@@ -312,6 +318,7 @@ class DQN(nn.Module):
                                          embed_size=embed_size,
                                          out_embed_size=final_embed_size,
                                          disconnect_graph=args.disconnect_obj,
+                                         separate_reflexive = args.separate_reflexive,
                                          device=args.device)
                  
                 print("GCN param:", sum([param.numel() for param in self.node_embed.parameters()]))
@@ -442,7 +449,7 @@ class DQN(nn.Module):
                 edge_type_2.append(("player_missile","enemy_robot_{}".format(i)))
 
             edge_type_2.append(("enemy_evilOtto","player"))
-            edge_type_2.append(("player_missile","enemy_evilOtto"))
+            #edge_type_2.append(("player_missile","enemy_evilOtto"))
             edge_type_2.append(("robot_missile","player"))
 
 
